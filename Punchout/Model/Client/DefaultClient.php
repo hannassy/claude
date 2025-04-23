@@ -11,7 +11,6 @@ use Magento\Framework\UrlInterface;
 use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Customer\Model\Session as CustomerSession;
 use Magento\Framework\Logger\Monolog;
-use Magento\Setup\Exception;
 use Tirehub\Punchout\Model\Config;
 use Tirehub\Punchout\Model\SessionFactory;
 use Tirehub\Punchout\Model\ResourceModel\Session as SessionResource;
@@ -38,7 +37,12 @@ class DefaultClient extends AbstractClient implements ClientInterface
         protected readonly CreateCustomerInterface $createCustomer,
         protected readonly GetPunchoutPartnersManagement $getPunchoutPartnersManagement,
         protected readonly EnablePunchoutModeInterface $enablePunchoutMode,
-        protected readonly DealerValidator $dealerValidator
+        protected readonly DealerValidator $dealerValidator,
+        protected readonly \Tirehub\Punchout\Model\ItemFactory $itemFactory,
+        protected readonly \Tirehub\Punchout\Model\ResourceModel\Item $itemResource,
+        protected readonly \Tirehub\Punchout\Model\ResourceModel\Item\CollectionFactory $itemCollectionFactory,
+        protected readonly \Magento\Checkout\Model\Cart $cart,
+        protected readonly \Magento\Catalog\Api\ProductRepositoryInterface $productRepository
     ) {
         parent::__construct(
             $sessionFactory,
@@ -47,10 +51,164 @@ class DefaultClient extends AbstractClient implements ClientInterface
         );
     }
 
+    /**
+     * Process item request for punchout
+     *
+     * @param RequestInterface $request
+     * @return \Magento\Framework\Controller\ResultInterface
+     */
     public function processItem(RequestInterface $request)
     {
-        $result = $this->rawFactory->create();
-        return $result->setHttpResponseCode(200);
+        try {
+            // Get required parameters
+            $partnerIdentity = $request->getParam('partnerIdentity');
+            $dealerCode = $request->getParam('dealerCode');
+            $itemId = $request->getParam('itemId');
+            $quantityNeeded = (int)$request->getParam('quantityNeeded', 1);
+
+            // Validate required parameters
+            if (empty($partnerIdentity) || empty($dealerCode)) {
+                throw new LocalizedException(__('Partner Identity and Dealer Code are required parameters'));
+            }
+
+            $this->logger->info('Punchout: Processing item request', [
+                'partnerIdentity' => $partnerIdentity,
+                'dealerCode' => $dealerCode,
+                'itemId' => $itemId,
+                'quantityNeeded' => $quantityNeeded
+            ]);
+
+            // Validate dealer code
+            try {
+                $this->dealerValidator->execute($dealerCode, $partnerIdentity);
+            } catch (\Exception $e) {
+                $this->logger->error('Punchout: Dealer validation failed: ' . $e->getMessage());
+                throw new LocalizedException(__('Invalid dealer code or partner identity'));
+            }
+
+            // Generate a unique buyerCookie (token) for this punchout session
+            // This will be used as the buyerCookie in subsequent steps
+            $buyerCookie = hash('sha256', $partnerIdentity . $dealerCode . uniqid('', true));
+
+            // Check if we have multiple items (comma-separated)
+            $itemIds = $itemId ? explode(',', $itemId) : [];
+
+            if (!empty($itemIds)) {
+                // Process each item
+                foreach ($itemIds as $singleItemId) {
+                    // Handle each item
+                    $this->saveItemRequest($buyerCookie, $dealerCode, $partnerIdentity, $singleItemId, $quantityNeeded);
+                }
+            }
+
+            // Create a new punchout session
+            $session = $this->sessionFactory->create();
+            $session->setData(SessionInterface::BUYER_COOKIE, $buyerCookie);
+            $session->setData(SessionInterface::CLIENT_TYPE, 'default');
+            $session->setData(SessionInterface::STATUS, SessionInterface::STATUS_NEW);
+            $session->setData(SessionInterface::PARTNER_IDENTITY, $partnerIdentity);
+            $session->setData(SessionInterface::CORP_ADDRESS_ID, $dealerCode);
+            $this->sessionResource->save($session);
+
+            // Get redirect URL from partner settings
+            $redirectUrl = $this->getRedirectUrl($partnerIdentity);
+
+            if (empty($redirectUrl)) {
+                // If no redirect URL is configured, return success response
+                $result = $this->rawFactory->create();
+                $result->setHttpResponseCode(200);
+                $result->setContents(json_encode(['success' => true, 'buyerCookie' => $buyerCookie]));
+                $result->setHeader('Content-Type', 'application/json');
+                return $result;
+            }
+
+            // Add cookie parameter to redirect URL
+            $separator = (strpos($redirectUrl, '?') !== false) ? '&' : '?';
+            $redirectUrl .= $separator . 'cookie=' . $buyerCookie;
+
+            // Redirect to partner URL
+            $resultRedirect = $this->redirectFactory->create();
+            return $resultRedirect->setUrl($redirectUrl);
+        } catch (LocalizedException $e) {
+            $this->logger->error('Punchout: Error processing item request: ' . $e->getMessage());
+
+            $result = $this->rawFactory->create();
+            $result->setHttpResponseCode(400);
+            $result->setContents(json_encode(['error' => $e->getMessage()]));
+            $result->setHeader('Content-Type', 'application/json');
+            return $result;
+        } catch (\Exception $e) {
+            $this->logger->error('Punchout: Unexpected error processing item request: ' . $e->getMessage());
+
+            $result = $this->rawFactory->create();
+            $result->setHttpResponseCode(500);
+            $result->setContents(json_encode(['error' => 'Internal server error']));
+            $result->setHeader('Content-Type', 'application/json');
+            return $result;
+        }
+    }
+
+    /**
+     * Save item request to database
+     *
+     * @param string $token
+     * @param string $dealerCode
+     * @param string $partnerIdentity
+     * @param string $itemId
+     * @param int $quantity
+     * @return void
+     */
+    private function saveItemRequest(
+        string $token,
+        string $dealerCode,
+        string $partnerIdentity,
+        string $itemId,
+        int $quantity
+    ): void {
+        try {
+            // Create new item record
+            $itemModel = $this->itemFactory->create();
+            $itemModel->setData([
+                'token' => $token,
+                'dealer_code' => $dealerCode,
+                'partner_identity' => $partnerIdentity,
+                'item_id' => $itemId,
+                'quantity' => $quantity,
+                'status' => 'pending'
+            ]);
+            $itemModel->save();
+
+            $this->logger->info(
+                'Punchout: Item request saved',
+                [
+                    'token' => $token,
+                    'itemId' => $itemId,
+                    'dealerCode' => $dealerCode
+                ]
+            );
+        } catch (\Exception $e) {
+            $this->logger->error('Punchout: Error saving item request: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Get redirect URL from partner settings
+     *
+     * @param string $partnerIdentity
+     * @return string|null
+     */
+    private function getRedirectUrl(string $partnerIdentity): ?string
+    {
+        $punchoutPartners = $this->getPunchoutPartnersManagement->getResult();
+
+        foreach ($punchoutPartners as $partner) {
+            if (strtolower($partner['identity'] ?? '') === strtolower($partnerIdentity)) {
+                return $partner['punchoutRedirectUrl'] ?? null;
+            }
+        }
+
+        return null;
     }
 
     public function processRequest(RequestInterface $request)
@@ -147,7 +305,7 @@ class DefaultClient extends AbstractClient implements ClientInterface
             $buyerCookie = $request->getParam('cookie');
 
             if (empty($buyerCookie)) {
-                throw new LocalizedException(__('Missing buyer cookie parameter'));
+                throw new LocalizedException(__('Missing required cookie parameter'));
             }
 
             // Load session by buyer cookie
@@ -155,7 +313,7 @@ class DefaultClient extends AbstractClient implements ClientInterface
             $session->load($buyerCookie, SessionInterface::BUYER_COOKIE);
 
             if (!$session->getId()) {
-                throw new LocalizedException(__('Invalid buyer cookie'));
+                throw new LocalizedException(__('Invalid session'));
             }
 
             // Get customer ID from session
@@ -175,13 +333,25 @@ class DefaultClient extends AbstractClient implements ClientInterface
                 $this->enablePunchoutMode->execute($buyerCookie);
 
                 $this->logger->info('Punchout: Customer logged in: ' . $customerId);
-            }
 
-            // Redirect to home page
-            $result = $this->redirectFactory->create();
-            $result->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0', true);
-            $result->setHeader('Pragma', 'no-cache', true);
-            return $result->setPath('/');
+                // Add requested items to cart if any
+                $itemsAdded = $this->addItemsToCart($buyerCookie);
+
+                // Redirect to cart page if items were added, otherwise to home page
+                $result = $this->redirectFactory->create();
+                $result->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0', true);
+                $result->setHeader('Pragma', 'no-cache', true);
+
+                if ($itemsAdded) {
+                    return $result->setPath('checkout/cart');
+                } else {
+                    return $result->setPath('/');
+                }
+            } else {
+                // No customer ID, redirect to login
+                $result = $this->redirectFactory->create();
+                return $result->setPath('customer/account/login');
+            }
         } catch (LocalizedException $e) {
             $this->logger->error('Punchout: Error during shopping start: ' . $e->getMessage());
             $result = $this->redirectFactory->create();
@@ -190,6 +360,103 @@ class DefaultClient extends AbstractClient implements ClientInterface
             $this->logger->error('Punchout: Unexpected error during shopping start: ' . $e->getMessage());
             $result = $this->redirectFactory->create();
             return $result->setPath('customer/account/login');
+        }
+    }
+
+    /**
+     * Load items by buyer cookie
+     *
+     * @param string $buyerCookie
+     * @return array
+     */
+    private function loadItemsByBuyerCookie(string $buyerCookie): array
+    {
+        try {
+            $collection = $this->itemCollectionFactory->create();
+            $collection->addFieldToFilter('token', $buyerCookie);
+            $collection->addFieldToFilter('status', 'pending');
+
+            return $collection->getItems();
+        } catch (\Exception $e) {
+            $this->logger->error('Punchout: Error loading items by buyer cookie: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Add requested items to cart
+     *
+     * @param string $buyerCookie
+     * @return bool
+     */
+    private function addItemsToCart(string $buyerCookie): bool
+    {
+        try {
+            $items = $this->loadItemsByBuyerCookie($buyerCookie);
+
+            if (empty($items)) {
+                return false;
+            }
+
+            $itemsAdded = false;
+
+            foreach ($items as $item) {
+                try {
+                    $productId = $this->getProductIdByItemId($item->getData('item_id'));
+
+                    if (!$productId) {
+                        $this->logger->warning('Punchout: Product not found for item: ' . $item->getData('item_id'));
+                        continue;
+                    }
+
+                    $quantity = (int)$item->getData('quantity');
+                    if ($quantity < 1) {
+                        $quantity = 1;
+                    }
+
+                    // Add product to cart
+                    $result = $this->cart->addProduct($productId, [
+                        'qty' => $quantity
+                    ]);
+
+                    if ($result) {
+                        // Update item status to added
+                        $item->setData('status', 'added');
+                        $this->itemResource->save($item);
+                        $itemsAdded = true;
+                    }
+                } catch (\Exception $e) {
+                    $this->logger->error('Punchout: Error adding item to cart: ' . $e->getMessage());
+                    continue;
+                }
+            }
+
+            if ($itemsAdded) {
+                // Save cart
+                $this->cart->save();
+            }
+
+            return $itemsAdded;
+        } catch (\Exception $e) {
+            $this->logger->error('Punchout: Error processing items for cart: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get product ID by item ID (SKU)
+     *
+     * @param string $itemId
+     * @return int|null
+     */
+    private function getProductIdByItemId(string $itemId): ?int
+    {
+        try {
+            $product = $this->productRepository->get($itemId);
+            return (int)$product->getId();
+        } catch (\Exception $e) {
+            $this->logger->error('Punchout: Error loading product by SKU: ' . $e->getMessage());
+            return null;
         }
     }
 
