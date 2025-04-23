@@ -1,0 +1,45 @@
+<?php
+/**
+ * @var \Magento\Framework\View\Element\Template $block
+ */
+?>
+
+<div id="punchout-portal-session-container" class="punchout-portal-session" v-cloak>
+    <div class="punchout-header">
+        <div class="punchout-header-title"><span>{{ customerName }}</span> {{ t('TireHub Punchout') }}</div>
+        <div class="punchout-header-logo-wrapper">
+            <div class="punchout-header-logo"></div>
+            <div class="punchout-header-contacts">
+                <div class="punchout-header-contact">
+                    <div class="punchout-header-contact-lang">{{ t('en') }}</div>
+                    <div class="punchout-header-contact-phone">833-847-3482</div>
+                </div>
+                <div class="punchout-header-contact">
+                    <div class="punchout-header-contact-lang">{{ t('es') }}</div>
+                    <div class="punchout-header-contact-phone">866-418-0682</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="punchout-location">
+        <div class="label">{{ t('Ship to Location') }}</div>
+        <div class="punchout-location-select">
+            <vue-select
+                class="custom-vue-select"
+                :options="locationOptions"
+                :searchable="true"
+                label="label"
+                id="location-select"
+                v-model="selectedLocation">
+            </vue-select>
+            <button class="primary-btn small" :disabled="!locationId" @click.stop.prevent="onLocationSelect">
+                {{ t('Select') }}
+            </button>
+        </div>
+    </div>
+    <form :action="locationSelectUrl" ref="locationSelectForm" method="POST">
+        <?php echo $block->getBlockHtml('formkey'); ?>
+        <input type="hidden" name="locationId" :value="locationId" />
+        <input type="hidden" name="cookie" :value="cookie" />
+    </form>
+</div>

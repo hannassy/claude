@@ -1,0 +1,19 @@
+<?php
+/**
+ * @var \Magento\Framework\View\Element\Template $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+?>
+
+<script type="text/x-magento-init">
+    {
+        "*": {
+            "Tirehub_Punchout/js/portal/main" : {
+                "cookie": <?= $block->getBuyerCookie(); ?>,
+                "customerName": <?= $block->getPartnerName(); ?>,
+                "locationSelectUrl": "<?= $escaper->escapeUrl($block->getUrl('punchout/portal/submit')) ?>",
+                "locationOptions": <?= $block->getAddresses(); ?>
+            }
+        }
+    }
+</script>

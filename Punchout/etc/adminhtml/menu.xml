@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add
+                id="Tirehub_Punchout::session"
+                title="Punchout Sessions"
+                translate="title"
+                module="Tirehub_Punchout"
+                sortOrder="60"
+                parent="Tirehub_Utility::root"
+                action="punchout/session/index"
+                resource="Tirehub_Punchout::session"/>
+    </menu>
+</config>

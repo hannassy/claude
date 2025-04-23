@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+    <table name="tirehub_punchout_session" resource="default" engine="innodb" comment="Punchout Session Table">
+        <column xsi:type="int" name="entity_id" padding="10" unsigned="true" nullable="false" identity="true" comment="Entity ID"/>
+        <column xsi:type="varchar" name="buyer_cookie" nullable="false" length="255" comment="Buyer Cookie"/>
+        <column xsi:type="varchar" name="temppo" nullable="true" length="255" comment="Temporary PO Number"/>
+        <column xsi:type="varchar" name="corp_address_id" nullable="true" length="50" comment="Corp Address Id"/>
+        <column xsi:type="varchar" name="partner_identity" nullable="true" length="50" comment="Partner Identity"/>
+        <column xsi:type="varchar" name="email" nullable="true" length="255" comment="Email"/>
+        <column xsi:type="varchar" name="full_name" nullable="true" length="255" comment="Full Name"/>
+        <column xsi:type="varchar" name="first_name" nullable="true" length="255" comment="First Name"/>
+        <column xsi:type="varchar" name="last_name" nullable="true" length="255" comment="Last Name"/>
+        <column xsi:type="varchar" name="phone" nullable="true" length="50" comment="Phone"/>
+        <column xsi:type="varchar" name="address_id" length="50" nullable="true" comment="Address Id"/>
+        <column xsi:type="varchar" name="browser_form_post_url" nullable="true" length="255" comment="Browser Form Post URL"/>
+        <column xsi:type="int" name="customer_id" nullable="true" unsigned="true" comment="Customer ID"/>
+        <column xsi:type="smallint" name="status" unsigned="true" nullable="false" default="0" comment="Status"/>
+        <column xsi:type="timestamp" name="created_at" on_update="false" nullable="false" default="CURRENT_TIMESTAMP" comment="Created At"/>
+        <column xsi:type="timestamp" name="updated_at" on_update="true" nullable="false" default="CURRENT_TIMESTAMP" comment="Updated At"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="entity_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="TIREHUB_PUNCHOUT_SESSION_BUYER_COOKIE">
+            <column name="buyer_cookie"/>
+        </constraint>
+        <index referenceId="TIREHUB_PUNCHOUT_SESSION_CUSTOMER_ID" indexType="btree">
+            <column name="customer_id"/>
+        </index>
+    </table>
+
+    <table name="tirehub_punchout_item" resource="default" engine="innodb" comment="PunchOut Requested Items">
+        <column xsi:type="int" name="entity_id" padding="10" unsigned="true" nullable="false" identity="true" comment="Item ID"/>
+        <column xsi:type="varchar" name="token" nullable="false" length="64" comment="Associated Token"/>
+        <column xsi:type="varchar" name="dealer_code" nullable="false" length="64" comment="Dealer Code"/>
+        <column xsi:type="varchar" name="partner_identity" nullable="false" length="255" comment="Partner Identity"/>
+        <column xsi:type="varchar" name="item_id" nullable="false" length="255" comment="Item ID"/>
+        <column xsi:type="int" name="quantity" unsigned="true" nullable="false" default="1" comment="Quantity"/>
+        <column xsi:type="varchar" name="status" nullable="false" default="pending" length="32" comment="Status"/>
+        <column xsi:type="timestamp" name="created_at" on_update="false" nullable="false" default="CURRENT_TIMESTAMP" comment="Created At"/>
+        <column xsi:type="timestamp" name="updated_at" on_update="true" nullable="true" comment="Updated At"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="entity_id"/>
+        </constraint>
+        <index referenceId="TIREHUB_PUNCHOUT_ITEM_TOKEN" indexType="btree">
+            <column name="token"/>
+        </index>
+    </table>
+</schema>

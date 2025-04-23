@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">punchout_session_listing.punchout_session_listing_data_source</item>
+        </item>
+    </argument>
+    <settings>
+        <buttons>
+            <button name="refresh" class="Tirehub\Punchout\Ui\Component\Control\Session\RefreshButton"/>
+        </buttons>
+        <spinner>punchout_session_columns</spinner>
+        <deps>
+            <dep>punchout_session_listing.punchout_session_listing_data_source</dep>
+        </deps>
+    </settings>
+    <dataSource name="punchout_session_listing_data_source" component="Magento_Ui/js/grid/provider">
+        <settings>
+            <storageConfig>
+                <param name="indexField" xsi:type="string">entity_id</param>
+            </storageConfig>
+            <updateUrl path="mui/index/render"/>
+        </settings>
+        <aclResource>Tirehub_Punchout::session</aclResource>
+        <dataProvider class="Tirehub\Punchout\Ui\DataProvider\Session\Listing\DataProvider" name="punchout_session_listing_data_source">
+            <settings>
+                <requestFieldName>id</requestFieldName>
+                <primaryFieldName>entity_id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <listingToolbar name="listing_top">
+        <settings>
+            <sticky>true</sticky>
+        </settings>
+        <bookmark name="bookmarks"/>
+        <columnsControls name="columns_controls"/>
+        <filterSearch name="fulltext"/>
+        <filters name="listing_filters">
+            <settings>
+                <templates>
+                    <filters>
+                        <select>
+                            <param name="template" xsi:type="string">ui/grid/filters/elements/ui-select</param>
+                            <param name="component" xsi:type="string">Magento_Ui/js/form/element/ui-select</param>
+                        </select>
+                    </filters>
+                </templates>
+            </settings>
+        </filters>
+        <paging name="listing_paging"/>
+    </listingToolbar>
+    <columns name="punchout_session_columns">
+        <selectionsColumn name="ids">
+            <settings>
+                <indexField>entity_id</indexField>
+            </settings>
+        </selectionsColumn>
+        <column name="entity_id">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">ID</label>
+                <sorting>asc</sorting>
+            </settings>
+        </column>
+        <column name="buyer_cookie">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Buyer Cookie</label>
+            </settings>
+        </column>
+        <column name="partner_identity">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Partner Identity</label>
+            </settings>
+        </column>
+        <column name="corp_address_id">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Corporate Address ID</label>
+            </settings>
+        </column>
+        <column name="address_id">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Address Id</label>
+            </settings>
+        </column>
+        <column name="email">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Email</label>
+            </settings>
+        </column>
+        <column name="customer_id">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Customer ID</label>
+            </settings>
+        </column>
+        <column name="status" component="Magento_Ui/js/grid/columns/select">
+            <settings>
+                <options class="Tirehub\Punchout\Model\Source\Session\Status"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Status</label>
+            </settings>
+        </column>
+        <column name="temppo">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Temporary PO</label>
+            </settings>
+        </column>
+        <column name="created_at" class="Magento\Ui\Component\Listing\Columns\Date">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <label translate="true">Created</label>
+            </settings>
+        </column>
+        <column name="updated_at" class="Magento\Ui\Component\Listing\Columns\Date">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <label translate="true">Updated</label>
+            </settings>
+        </column>
+    </columns>
+</listing>

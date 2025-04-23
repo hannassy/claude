@@ -1,0 +1,48 @@
+{
+    "tirehub_punchout_session": {
+        "column": {
+            "entity_id": true,
+            "buyer_cookie": true,
+            "corp_address_id": true,
+            "partner_identity": true,
+            "email": true,
+            "full_name": true,
+            "first_name": true,
+            "last_name": true,
+            "phone": true,
+            "browser_form_post_url": true,
+            "customer_id": true,
+            "status": true,
+            "created_at": true,
+            "updated_at": true,
+            "address_id": true,
+            "temppo": true
+        },
+        "index": {
+            "TIREHUB_PUNCHOUT_SESSION_CUSTOMER_ID": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "TIREHUB_PUNCHOUT_SESSION_BUYER_COOKIE": true
+        }
+    },
+    "tirehub_punchout_item": {
+        "column": {
+            "entity_id": true,
+            "token": true,
+            "dealer_code": true,
+            "partner_identity": true,
+            "item_id": true,
+            "quantity": true,
+            "status": true,
+            "created_at": true,
+            "updated_at": true
+        },
+        "index": {
+            "TIREHUB_PUNCHOUT_ITEM_TOKEN": true
+        },
+        "constraint": {
+            "PRIMARY": true
+        }
+    }
+}
