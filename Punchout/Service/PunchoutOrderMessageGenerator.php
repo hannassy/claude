@@ -32,6 +32,13 @@ class PunchoutOrderMessageGenerator
             // Get client type to determine formatting
             $corpAddressId = $session->getData('corp_address_id');
 
+            // Get browser form post URL from session
+            $browserFormPostUrl = $session->getData('browser_form_post_url');
+            if (empty($browserFormPostUrl)) {
+                $this->logger->error('Punchout: Missing browser_form_post_url in session');
+                throw new \Exception('Missing browser_form_post_url');
+            }
+
             // Get partner settings
             $partner = $this->getPartner($corpAddressId);
 
@@ -39,12 +46,11 @@ class PunchoutOrderMessageGenerator
             $cxml = $this->generateCxml($order, $session, $partner);
 
             // Prepare browser post form data
-            $formData = [
+            return [
                 'cxml-urlencoded' => rawurlencode($cxml),
-                'cxml-base64' => base64_encode($cxml)
+                'cxml-base64' => base64_encode($cxml),
+                'browser_form_post_url' => $browserFormPostUrl
             ];
-
-            return $formData;
         } catch (\Exception $e) {
             $this->logger->error('Punchout: Error generating order message: ' . $e->getMessage());
             throw $e;
