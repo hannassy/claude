@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE cXML SYSTEM "http://xml.cXML.org/schemas/cXML/1.2.041/cXML.dtd">
+<cXML payloadID="638625587870707221@tirehub" timestamp="2024-09-21T23:39:47.0707242+00:00">
+    <Response>
+        <Status code="200" text="success"/>
+        <PunchOutSetupResponse>
+            <StartPage>
+                <URL>https://tirehub.test/punchout/shopping/start?ss=PSS1e4e0d5f-bec5-46fe-afc3-0f969f7f5d9c</URL>
+            </StartPage>
+        </PunchOutSetupResponse>
+    </Response>
+</cXML>

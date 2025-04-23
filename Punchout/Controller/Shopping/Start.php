@@ -9,6 +9,7 @@ use Magento\Framework\Controller\ResultFactory;
 use Tirehub\Punchout\Service\GetClient;
 use Tirehub\Punchout\Model\SessionFactory;
 use Magento\Customer\Model\Session as CustomerSession;
+use Tirehub\Punchout\Api\DisablePunchoutModeInterface;
 
 class Start implements HttpGetActionInterface
 {
@@ -17,12 +18,15 @@ class Start implements HttpGetActionInterface
         private readonly ResultFactory $resultFactory,
         private readonly GetClient $getClient,
         private readonly SessionFactory $sessionFactory,
-        private readonly CustomerSession $customerSession
+        private readonly CustomerSession $customerSession,
+        private readonly DisablePunchoutModeInterface $disablePunchoutMode
     ) {
     }
 
     public function execute()
     {
+        $this->disablePunchoutMode->execute();
+
         $customerId = $this->customerSession->getId();
         if ($customerId) {
             $this->customerSession->logout()->setLastCustomerId($customerId);

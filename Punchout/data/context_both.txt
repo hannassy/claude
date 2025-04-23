@@ -1,0 +1,224 @@
+1. We have 2 types of clients with different punchout process
+2. each client have theis own setting which are already known and hardcoded in Model/Config.php in function getPunchoutPartners
+we can not save to the database bacause we receive them from API and they can be changed anytime
+[
+  {
+    "domain": "carmax",
+    "identity": "carmax",
+    "sharedSecret": "testSharedSecret",
+    "dealerPrefix": "CMX_",
+    "corpAddressId": "362343",
+    "punchoutRedirectUrl": "https://test-url.com/punchout/go?id=25",
+    "trimLeadingZeroFromDealerCode": true
+  },
+  {
+      "domain": "default",
+      "identity": "default",
+      "sharedSecret": "testSharedSecret",
+      "dealerPrefix": "",
+      "corpAddressId": "111111",
+      "punchoutRedirectUrl": null,
+      "trimLeadingZeroFromDealerCode": true
+    }
+]
+3. Technical requirements
+    module name Tirehub_Punchout
+    table tirehub_punchout_session - model "Session"
+    table tirehub_punchout_item - model "Item"
+    php8.2
+    don't need @param comments for functions
+    on step2 we call getClient service to know which type of client
+    in Tirehub\Punchout\Model\Client will be 2 clients: DefaultClient and CarMaxClient (lets keep it empty for now)
+    all logic should be in according client class
+
+    default:
+        step1:
+            does not exist for this type of clients
+        step2:
+            received post cXML request:
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.041/cXML.dtd">
+            <cXML payloadID="1742988669.5695@punchoutcommerce.com" timestamp="2025-03-26T11:31:09+00:00">
+                <Header>
+                    <From>
+                        <Credential domain="NetworkId">
+                            <Identity>client3</Identity>
+                        </Credential>
+                    </From>
+                    <To>
+                        <Credential domain="tirehubDomain">
+                            <Identity>tirehubIdentity</Identity>
+                        </Credential>
+                    </To>
+                    <Sender>
+                        <Credential domain="domain3">
+                            <Identity>client3</Identity>
+                            <SharedSecret>testSharedSecret</SharedSecret>
+                        </Credential>
+                        <UserAgent>PunchOutCommerce PunchOut Tester</UserAgent>
+                    </Sender>
+                </Header>
+                <Request deploymentMode="production">
+                    <PunchOutSetupRequest operation="create">
+                        <BuyerCookie>eb42d395010709756fe80e0dbcc033eb</BuyerCookie>
+                        <Extrinsic name="DealerCode">361210</Extrinsic>
+                        <Extrinsic name="LocationId">361210</Extrinsic>
+                        <Extrinsic name="UserEmail">jdoe@example.com</Extrinsic>
+                        <Extrinsic name="UserFullName">John Doe</Extrinsic>
+                        <Extrinsic name="UserPrintableName">John Doe</Extrinsic>
+                        <Extrinsic name="FirstName">John</Extrinsic>
+                        <Extrinsic name="LastName">Doe</Extrinsic>
+                        <Extrinsic name="PhoneNumber">555-555-5555</Extrinsic>
+                        <BrowserFormPost>
+                            <URL>https://punchoutcommerce.com/tools/cxml-punchout-return</URL>
+                        </BrowserFormPost>
+                        <SupplierSetup>
+                            <URL>https://tirehub.test/punchout/setup/request</URL>
+                        </SupplierSetup>
+                        <ShipTo>
+                            <Address addressID="TEST">
+                                <Name xml:lang="en">TEST</Name>
+                                <PostalAddress>
+                                    <Street>123 Street Address</Street>
+                                    <City>Rockville</City>
+                                    <State>MD</State>
+                                    <PostalCode>20850</PostalCode>
+                                    <Country isoCountryCode="US">US</Country>
+                                </PostalAddress>
+                            </Address>
+                        </ShipTo>
+                    </PunchOutSetupRequest>
+                </Request>
+            </cXML>
+
+        step3:
+            accept request in punchout/shopping/start controller
+            validate BuyerCookie
+            load customer associated to BuyerCookie
+            login customer
+            redirect customer to home page
+
+    carmax:
+        step1:
+            send GET request with items of interest to my custom url with 4 params:
+            dealerCode(required), partnerIdentity(required), itemId, quantityNeeded
+            He can send more than 1 request and i should save requested item to custom table
+            i should have a function validateDealerCode - leave empty for future logic
+            i should have a function validatePartnerIdentity - leave empty for future logic
+            as a result i should redirect him to "punchoutRedirectUrl" from config with generated token
+                token should be the one for several received request since for step2 it will be received as BuierCookie and will be user for finding all items of interests
+        step2:
+            received post cXML request:
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.041/cXML.dtd">
+            <cXML payloadID="1742988669.5695@punchoutcommerce.com" timestamp="2025-03-26T11:31:09+00:00">
+                <Header>
+                    <From>
+                        <Credential domain="NetworkId">
+                            <Identity>client3</Identity>
+                        </Credential>
+                    </From>
+                    <To>
+                        <Credential domain="tirehubDomain">
+                            <Identity>tirehubIdentity</Identity>
+                        </Credential>
+                    </To>
+                    <Sender>
+                        <Credential domain="domain3">
+                            <Identity>client3</Identity>
+                            <SharedSecret>testSharedSecret</SharedSecret>
+                        </Credential>
+                        <UserAgent>PunchOutCommerce PunchOut Tester</UserAgent>
+                    </Sender>
+                </Header>
+                <Request deploymentMode="production">
+                    <PunchOutSetupRequest operation="create">
+                        <BuyerCookie>eb42d395010709756fe80e0dbcc033eb</BuyerCookie>
+                        <Extrinsic name="DealerCode">361210</Extrinsic>
+                        <Extrinsic name="UserEmail">jdoe@example.com</Extrinsic>
+                        <Extrinsic name="UserFullName">John Doe</Extrinsic>
+                        <Extrinsic name="UserPrintableName">John Doe</Extrinsic>
+                        <Extrinsic name="FirstName">John</Extrinsic>
+                        <Extrinsic name="LastName">Doe</Extrinsic>
+                        <Extrinsic name="PhoneNumber">555-555-5555</Extrinsic>
+                        <BrowserFormPost>
+                            <URL>https://punchoutcommerce.com/tools/cxml-punchout-return</URL>
+                        </BrowserFormPost>
+                        <SupplierSetup>
+                            <URL>https://tirehub.test/punchout/setup/request</URL>
+                        </SupplierSetup>
+                        <ShipTo>
+                            <Address addressID="TEST">
+                                <Name xml:lang="en">TEST</Name>
+                                <PostalAddress>
+                                    <Street>123 Street Address</Street>
+                                    <City>Rockville</City>
+                                    <State>MD</State>
+                                    <PostalCode>20850</PostalCode>
+                                    <Country isoCountryCode="US">US</Country>
+                                </PostalAddress>
+                            </Address>
+                        </ShipTo>
+                    </PunchOutSetupRequest>
+                </Request>
+            </cXML>
+
+            validate credentials
+            by "UserEmail" I should find customer, if not - create, make an empty function createCustomer for it
+            we should store "BuyerCookie" somewhere for step3 and customer email (or customer id)
+            on success send 200 response to sender with our custom url https://tirehub.test/punchout/location/select and enctypted BuyerCookie
+            on fail send error
+
+        step3:
+            accept request in punchout/location/select controller
+            validate BuyerCookie
+            load customer associated to BuyerCookie
+            show simple frontend page with select and list of location (example: ['1' => 'Location1', '2' => 'Location2']
+            on submit send request to punchout/location/selectPost
+            validate location
+            login customer
+            add items of interests to the cart from step1
+            redirect customer to the cart
+            mark items of interests in our database as processed or completed (for not using them next time)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+carmax:
+    will call allowed
+
+default:
+    addressId = dealerPrefix_1111111
+    magento seller_id = customer is from asserbb2bcontact
+
+NO FREIGHT - for both
+
+shortcat 996
+
+
+https://tirehub.test/punchout/portal?cookie=d8ea09f22d3d880c57812a7804fae94b
+

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cXML SYSTEM "http://xml.cXML.org/schemas/cXML/1.2.041/cXML.dtd">
+<cXML payloadID="68074305ddf62@tirehub" timestamp="2025-04-22T03:19:33.909142-04:00">
+    <Header>
+        <From>
+            <Credential domain="NetworkId">
+                <Identity>tirehub</Identity>
+            </Credential>
+        </From>
+        <To>
+            <Credential domain="NetworkId">
+                <Identity>default</Identity>
+            </Credential>
+        </To>
+        <Sender>
+            <Credential domain="NetworkId">
+                <Identity>tirehub</Identity>
+                <SharedSecret>cr#th#2024</SharedSecret>
+            </Credential>
+            <UserAgent>TireHub Punchout</UserAgent>
+        </Sender>
+    </Header>
+    <Message>
+        <PunchOutOrderMessage>
+            <BuyerCookie>d8ea09f22d3d880c57812a7804fae94b</BuyerCookie>
+            <SupplierOrderID>TEMPPOd4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35</SupplierOrderID>
+            <ItemOut quantity="">
+                <ItemDetail>
+                    <Description lang="en-US">Items: STARFIRE SOLARUS AS (Qty: 0, SKU: SF 162005001)</Description>
+                </ItemDetail>
+                <Money currency="USD">80.33</Money>
+            </ItemOut>
+            <Extrinsic name="QuoteID">10408</Extrinsic>
+            <Extrinsic name="CustomerID">230810</Extrinsic>
+            <Extrinsic name="DealerCode">361210</Extrinsic>
+        </PunchOutOrderMessage>
+    </Message>
+</cXML>

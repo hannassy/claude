@@ -87,16 +87,17 @@
                 <label translate="true">Address Id</label>
             </settings>
         </column>
-        <column name="email">
+        <column name="erp_order_number">
             <settings>
                 <filter>text</filter>
-                <label translate="true">Email</label>
+                <label translate="true">Erp Order Number</label>
             </settings>
         </column>
-        <column name="customer_id">
+        <column name="customer_id" class="Tirehub\Punchout\Ui\Component\Listing\Column\CustomerActions">
             <settings>
                 <filter>textRange</filter>
                 <label translate="true">Customer ID</label>
+                <bodyTmpl>ui/grid/cells/html</bodyTmpl>
             </settings>
         </column>
         <column name="status" component="Magento_Ui/js/grid/columns/select">

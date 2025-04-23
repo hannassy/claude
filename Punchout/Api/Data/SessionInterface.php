@@ -11,7 +11,7 @@ interface SessionInterface
     const CORP_ADDRESS_ID = 'corp_address_id';
     const PARTNER_IDENTITY = 'partner_identity';
     const TEMPPO = 'temppo';
-    const EMAIL = 'email';
+    const ERP_ORDER_NUMBER = 'erp_order_number';
     const FULL_NAME = 'full_name';
     const FIRST_NAME = 'first_name';
     const LAST_NAME = 'last_name';

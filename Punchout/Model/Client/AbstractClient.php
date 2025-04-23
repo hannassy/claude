@@ -52,10 +52,6 @@ abstract class AbstractClient
         $lastName = $extrinsics['LastName'] ?? null;
         $phone = $extrinsics['PhoneNumber'] ?? null;
 
-        if ($email) {
-            $session->setData(SessionInterface::EMAIL, $email);
-        }
-
         if ($fullName) {
             $session->setData(SessionInterface::FULL_NAME, $fullName);
         }

@@ -5,7 +5,7 @@
             "buyer_cookie": true,
             "corp_address_id": true,
             "partner_identity": true,
-            "email": true,
+            "erp_order_number": true,
             "full_name": true,
             "first_name": true,
             "last_name": true,

@@ -217,9 +217,6 @@ class DefaultClient extends AbstractClient implements ClientInterface
 
             // Get extrinsics from session
             $extrinsics = [];
-            if ($session->getData(SessionInterface::EMAIL)) {
-                $extrinsics['UserEmail'] = $session->getData(SessionInterface::EMAIL);
-            }
             if ($session->getData(SessionInterface::FULL_NAME)) {
                 $extrinsics['UserFullName'] = $session->getData(SessionInterface::FULL_NAME);
             }

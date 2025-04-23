@@ -9,6 +9,9 @@ use Psr\Log\LoggerInterface;
 use Tirehub\Punchout\Model\Session as PunchoutSession;
 use Magento\Customer\Model\Session as CustomerSession;
 use Tirehub\Punchout\Model\SessionFactory;
+use Tirehub\Punchout\Api\Data\SessionInterface;
+use Tirehub\Punchout\Api\DisablePunchoutModeInterface;
+use Tirehub\Punchout\Model\ResourceModel\Session as SessionResource;
 
 class PunchoutOrderMessageGenerator
 {
@@ -17,7 +20,9 @@ class PunchoutOrderMessageGenerator
         private readonly LoggerInterface $logger,
         private readonly GetPunchoutPartnersManagement $getPunchoutPartnersManagement,
         private readonly CustomerSession $customerSession,
-        private readonly SessionFactory $sessionFactory
+        private readonly SessionFactory $sessionFactory,
+        private readonly DisablePunchoutModeInterface $disablePunchoutMode,
+        private readonly SessionResource $sessionResource
     ) {
     }
 
@@ -30,10 +35,10 @@ class PunchoutOrderMessageGenerator
             $session->load($buyerCookie, 'buyer_cookie');
 
             // Get client type to determine formatting
-            $corpAddressId = $session->getData('corp_address_id');
+            $corpAddressId = $session->getData(SessionInterface::CORP_ADDRESS_ID);
 
             // Get browser form post URL from session
-            $browserFormPostUrl = $session->getData('browser_form_post_url');
+            $browserFormPostUrl = $session->getData(SessionInterface::BROWSER_FORM_POST_URL);
             if (empty($browserFormPostUrl)) {
                 $this->logger->error('Punchout: Missing browser_form_post_url in session');
                 throw new \Exception('Missing browser_form_post_url');
@@ -46,11 +51,35 @@ class PunchoutOrderMessageGenerator
             $cxml = $this->generateCxml($order, $session, $partner);
 
             // Prepare browser post form data
-            return [
+            $formData = [
                 'cxml-urlencoded' => rawurlencode($cxml),
                 'cxml-base64' => base64_encode($cxml),
                 'browser_form_post_url' => $browserFormPostUrl
             ];
+
+            try {
+                // Update session status to completed
+                $session->setData(SessionInterface::STATUS, SessionInterface::STATUS_COMPLETED);
+
+                // Optionally link the order to the session for reference
+                // You might want to add an order_id column to your session table for this
+                if ($order->getId()) {
+                    $session->setData(SessionInterface::ERP_ORDER_NUMBER, $order->getErpOrderNumber());
+                }
+
+                // Save the updated session
+                $this->sessionResource->save($session);
+
+                $this->disablePunchoutMode->execute();
+
+                $this->logger->info("Punchout: Session {$session->getId()} marked as completed for order {$order->getErpOrderNumber()}");
+
+                return $formData;
+            } catch (\Exception $e) {
+                $this->logger->error("Punchout: Error updating session status: {$e->getMessage()}");
+                // Still return form data even if status update fails
+                return $formData;
+            }
         } catch (\Exception $e) {
             $this->logger->error('Punchout: Error generating order message: ' . $e->getMessage());
             throw $e;
