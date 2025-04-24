@@ -345,21 +345,21 @@ class DefaultClient extends AbstractClient implements ClientInterface
                 if ($itemsAdded) {
                     return $result->setPath('checkout/cart');
                 } else {
-                    return $result->setPath('/');
+                    return $result->setPath('customer/account');
                 }
             } else {
                 // No customer ID, redirect to login
                 $result = $this->redirectFactory->create();
-                return $result->setPath('customer/account/login');
+                return $result->setPath('customer/account');
             }
         } catch (LocalizedException $e) {
             $this->logger->error('Punchout: Error during shopping start: ' . $e->getMessage());
             $result = $this->redirectFactory->create();
-            return $result->setPath('customer/account/login');
+            return $result->setPath('customer/account');
         } catch (\Exception $e) {
             $this->logger->error('Punchout: Unexpected error during shopping start: ' . $e->getMessage());
             $result = $this->redirectFactory->create();
-            return $result->setPath('customer/account/login');
+            return $result->setPath('customer/account');
         }
     }
 
@@ -462,10 +462,10 @@ class DefaultClient extends AbstractClient implements ClientInterface
 
     public function processPortalAddressSubmit(RequestInterface $request)
     {
-        try {
-            $buyerCookie = $request->getParam('cookie');
-            $addressId = $request->getParam('locationId');
+        $buyerCookie = $request->getParam('cookie');
+        $addressId = $request->getParam('locationId');
 
+        try {
             if (empty($buyerCookie)) {
                 throw new LocalizedException(__('Missing buyer cookie parameter'));
             }
@@ -513,8 +513,7 @@ class DefaultClient extends AbstractClient implements ClientInterface
             // Redirect back to portal with error
             $result = $this->redirectFactory->create();
             return $result->setPath('punchout/portal', [
-                'cookie' => $buyerCookie,
-                'error' => $e->getMessage()
+                'cookie' => $buyerCookie
             ]);
         } catch (\Exception $e) {
             $this->logger->error('Punchout: Unexpected error in portal address submit: ' . $e->getMessage());

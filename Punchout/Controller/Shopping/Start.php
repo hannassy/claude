@@ -47,6 +47,6 @@ class Start implements HttpGetActionInterface
         // Fallback to home page if no valid cookie
         $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
 
-        return $resultRedirect->setPath('/');
+        return $resultRedirect->setPath('/customer/account');
     }
 }

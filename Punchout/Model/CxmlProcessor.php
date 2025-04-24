@@ -86,7 +86,7 @@ class CxmlProcessor
 
             // Ship to address
             $addressId = null;
-            if (isset($setupRequest->ShipTo) && isset($setupRequest->ShipTo->Address)) {
+            if (isset($setupRequest->ShipTo->Address)) {
                 $addressId = $this->extractAddressId($setupRequest->ShipTo->Address, $senderIdentity);
             }
 
@@ -240,17 +240,17 @@ class CxmlProcessor
 
         try {
             $result = $this->lookupDealers->execute(['dealerCode' => $formattedAddressId]);
-            $resultDealerCode = $result['results']['dealerCode'] ?? null;
+            $resultDealerCode = $result['results'][0]['dealerCode'] ?? null;
 
             if (!$resultDealerCode) {
                 throw new LocalizedException(__('Dealer with addressId="%1" was not found', $formattedAddressId));
             }
         } catch (Exception $e) {
             $this->logger->error('Punchout: ' . $e->getMessage());
-            $addressId = null;
+            $formattedAddressId = null;
         }
 
-        return $addressId;
+        return $formattedAddressId;
     }
 
     /**

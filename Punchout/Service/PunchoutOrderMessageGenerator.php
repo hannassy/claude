@@ -72,6 +72,9 @@ class PunchoutOrderMessageGenerator
 
                 $this->disablePunchoutMode->execute();
 
+                // Log out the customer
+                $this->customerSession->logout();
+
                 $this->logger->info("Punchout: Session {$session->getId()} marked as completed for order {$order->getErpOrderNumber()}");
 
                 return $formData;
@@ -174,7 +177,7 @@ class PunchoutOrderMessageGenerator
             // Add item ID
             $itemId = $itemIn->addChild('ItemID');
             $itemId->addChild('SupplierPartID', $item->getSku());
-            $itemId->addChild('SupplierPartAuxiliaryID', $punchoutSession->getData('temppo'));
+            //$itemId->addChild('SupplierPartAuxiliaryID', $punchoutSession->getData('temppo'));
 
             // Add item detail
             $itemDetail = $itemIn->addChild('ItemDetail');
@@ -188,23 +191,10 @@ class PunchoutOrderMessageGenerator
             $itemDetail->addChild('Description', $item->getName());
             $itemDetail->addChild('UnitOfMeasure', 'EA');
 
-            // Add manufacturer info if available
-            $product = $item->getProduct();
-            if ($product) {
-                $mfgSku = $product->getData('manufacturer_sku') ?: $item->getSku();
-                $mfgName = $product->getData('manufacturer') ?: '';
-
-                $itemDetail->addChild('ManufacturerPartID', $mfgSku);
-                if (!empty($mfgName)) {
-                    $itemDetail->addChild('ManufacturerName', strtoupper($mfgName));
-                }
-            } else {
-                $itemDetail->addChild('ManufacturerPartID', $item->getSku());
-            }
+            $itemDetail->addChild('ManufacturerPartID', $item->getSku());
 
             // Add UNSPSC classification (tire industry code) // TODO
-            $itemDetail->addChild('Classification', '25172504')
-                ->addAttribute('domain', 'UNSPSC');
+            //$itemDetail->addChild('Classification', '25172504')->addAttribute('domain', 'UNSPSC');
 
             $lineNumber++;
         }
