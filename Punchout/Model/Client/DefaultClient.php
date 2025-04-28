@@ -240,6 +240,12 @@ class DefaultClient extends AbstractClient implements ClientInterface
                 $addressId
             );
 
+            // If in debug mode and cXML request is available, save it
+            if ($this->config->isDebugMode() && isset($parsedData['cxml_request'])) {
+                $session->setData('cxml_request', $parsedData['cxml_request']);
+                $this->sessionResource->save($session);
+            }
+
             // If no addressID in shipToAddress, redirect to portal for selection
             if (!$addressId) {
                 $this->logger->info('Punchout: No valid addressID found, redirecting to portal');

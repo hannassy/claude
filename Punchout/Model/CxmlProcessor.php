@@ -17,7 +17,8 @@ class CxmlProcessor
         private readonly GetPunchoutPartnersManagement $getPunchoutPartnersManagement,
         private readonly Monolog $logger,
         private readonly CredentialsValidator $credentialsValidator,
-        private readonly LookupDealersInterface $lookupDealers
+        private readonly LookupDealersInterface $lookupDealers,
+        private readonly Config $config
     ) {
     }
 
@@ -91,7 +92,7 @@ class CxmlProcessor
             }
 
             // Return parsed data
-            return [
+            $result = [
                 'from' => [
                     'domain' => $fromDomain,
                     'identity' => $fromIdentity
@@ -110,6 +111,13 @@ class CxmlProcessor
                 'browser_form_post_url' => $browserFormPostUrl,
                 'address_id' => $addressId
             ];
+
+            // If debug mode is enabled, store the raw cXML request
+            if ($this->config->isDebugMode()) {
+                $result['cxml_request'] = $content;
+            }
+
+            return $result;
         } catch (LocalizedException $e) {
             $this->logger->error('Punchout: ' . $e->getMessage());
             throw $e;

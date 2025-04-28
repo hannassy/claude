@@ -60,6 +60,19 @@ class DataProvider extends UiDataProvider
                 $itemData['updated_at'] = date('Y-m-d H:i:s', strtotime($itemData['updated_at']));
             }
 
+            // Set has_cxml flag for UI rendering
+            if (isset($itemData['cxml_request']) && !empty($itemData['cxml_request'])) {
+                $itemData['has_cxml'] = true;
+            } else {
+                $itemData['has_cxml'] = false;
+
+                // Don't include potentially large XML content in grid data
+                if (isset($itemData['cxml_request'])) {
+                    // Just indicate it exists but don't send the whole content
+                    $itemData['cxml_request'] = !empty($itemData['cxml_request']);
+                }
+            }
+
             $arrItems['items'][] = $itemData;
         }
 
