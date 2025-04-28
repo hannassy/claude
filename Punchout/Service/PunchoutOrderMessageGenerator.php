@@ -130,21 +130,21 @@ class PunchoutOrderMessageGenerator
         $fromCredential->addAttribute('domain', 'DUNS');
         $fromCredential->addChild('Identity', '08-125-4817');
 
-        // To section
+        // To section // TODO
         $to = $header->addChild('To');
         $toCredential = $to->addChild('Credential');
         $toCredential->addAttribute('domain', 'DUNS');
         $toCredential->addChild('Identity', $partner['identity'] ?? '');
 
-        // Sender section
+        // Sender section // TODO
         $sender = $header->addChild('Sender');
         $senderCredential = $sender->addChild('Credential');
         $senderCredential->addAttribute('domain', 'DUNS');
         $senderCredential->addChild('Identity', '08-125-4817');
         if ($partner && isset($partner['sharedSecret'])) {
-            $senderCredential->addChild('SharedSecret', $partner['sharedSecret'] ?? '');
+            $senderCredential->addChild('SharedSecret', $partner['sharedSecret']);
         }
-        $sender->addChild('UserAgent', 'TireHub Transactional Middleware');
+        $sender->addChild('UserAgent', 'TireHub Transactional B2B');
 
         // Add message
         $message = $xml->addChild('Message');

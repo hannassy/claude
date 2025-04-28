@@ -12,16 +12,13 @@ class Config
     ) {
     }
 
-    public function getTestEmails(): array
-    {
-        $emails = (string)$this->scopeConfig->getValue('punchout/general/test_emails');
-        $emails = explode(',', $emails);
-
-        return array_map('trim', $emails);
-    }
-
     public function getCustomerEmailTemplate(): string
     {
         return (string)$this->scopeConfig->getValue('punchout/customer/email_template');
+    }
+
+    public function isDebugMode(): bool
+    {
+        return (bool)$this->scopeConfig->getValue('punchout/dev/is_debug_mode');
     }
 }

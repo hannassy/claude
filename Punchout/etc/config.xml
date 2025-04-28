@@ -5,6 +5,9 @@
 			<customer>
 				<email_template>Punchout_shiptoID@tirehub.com</email_template>
 			</customer>
+			<dev>
+				<is_debug_mode>1</is_debug_mode>
+			</dev>
 		</punchout>
 	</default>
 </config>
