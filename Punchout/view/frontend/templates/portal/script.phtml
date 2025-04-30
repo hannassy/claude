@@ -11,7 +11,7 @@
             "Tirehub_Punchout/js/portal/main" : {
                 "cookie": <?= $block->getBuyerCookie(); ?>,
                 "customerName": <?= $block->getPartnerName(); ?>,
-                "locationSelectUrl": "<?= $escaper->escapeUrl($block->getUrl('punchout/portal/submit')) ?>",
+                "locationSelectUrl": "<?= $escaper->escapeUrl($block->getSecureSubmitUrl()) ?>",
                 "locationOptions": <?= $block->getAddresses(); ?>
             }
         }

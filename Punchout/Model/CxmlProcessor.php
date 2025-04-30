@@ -10,6 +10,8 @@ use Tirehub\Punchout\Service\GetPunchoutPartnersManagement;
 use SimpleXMLElement;
 use Tirehub\ApiMiddleware\Api\Request\LookupDealersInterface;
 use Exception;
+use Tirehub\Punchout\Model\SessionFactory;
+use Tirehub\Punchout\Api\Data\SessionInterface;
 
 class CxmlProcessor
 {
@@ -18,7 +20,7 @@ class CxmlProcessor
         private readonly Monolog $logger,
         private readonly CredentialsValidator $credentialsValidator,
         private readonly LookupDealersInterface $lookupDealers,
-        private readonly Config $config
+        private readonly SessionFactory $sessionFactory
     ) {
     }
 
@@ -71,6 +73,9 @@ class CxmlProcessor
                 throw new LocalizedException(__('Invalid cXML request: Missing BuyerCookie'));
             }
 
+            // Check if this buyer cookie is already used with a different partner identity
+            $this->validateBuyerCookieNotReused($buyerCookie, $senderIdentity);
+
             // Extract extrinsic data
             $extrinsics = [];
             foreach ($setupRequest->Extrinsic as $extrinsic) {
@@ -92,7 +97,7 @@ class CxmlProcessor
             }
 
             // Return parsed data
-            $result = [
+            return [
                 'from' => [
                     'domain' => $fromDomain,
                     'identity' => $fromIdentity
@@ -111,19 +116,54 @@ class CxmlProcessor
                 'browser_form_post_url' => $browserFormPostUrl,
                 'address_id' => $addressId
             ];
-
-            // If debug mode is enabled, store the raw cXML request
-            if ($this->config->isDebugMode()) {
-                $result['cxml_request'] = $content;
-            }
-
-            return $result;
         } catch (LocalizedException $e) {
             $this->logger->error('Punchout: ' . $e->getMessage());
             throw $e;
         } catch (\Exception $e) {
             $this->logger->error('Punchout: XML parsing error: ' . $e->getMessage() . ' in content: ' . substr($content, 0, 500));
             throw new LocalizedException(__('Error parsing cXML request: %1', $e->getMessage()));
+        }
+    }
+
+    /**
+     * Validate that the buyer cookie is not being reused with a different partner identity
+     *
+     * @param string $buyerCookie
+     * @param string $partnerIdentity
+     * @throws LocalizedException
+     */
+    private function validateBuyerCookieNotReused(string $buyerCookie, string $partnerIdentity): void
+    {
+        try {
+            // Check if a session with this buyer cookie already exists
+            $session = $this->sessionFactory->create();
+            $session->load($buyerCookie, SessionInterface::BUYER_COOKIE);
+
+            // If session exists and has already been processed, reject the request
+            if ($session->getId()) {
+                $sessionStatus = (int)$session->getData(SessionInterface::STATUS);
+
+                // If session is not in 'NEW' status, it's already been processed
+                if ($sessionStatus !== SessionInterface::STATUS_NEW) {
+                    $this->logger->warning(
+                        'Punchout: Attempt to reuse buyer cookie',
+                        [
+                            'buyer_cookie' => $buyerCookie,
+                            'partner' => $partnerIdentity,
+                            'session_status' => $sessionStatus
+                        ]
+                    );
+
+                    throw new LocalizedException(
+                        __('Security violation: This buyer cookie has already been used')
+                    );
+                }
+            }
+        } catch (LocalizedException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            $this->logger->error('Punchout: Error validating buyer cookie: ' . $e->getMessage());
+            // Continue processing if there's an unexpected error checking the session
         }
     }
 
@@ -226,6 +266,12 @@ class CxmlProcessor
             }
         }
 
+        //>= 123456 - CMX_1234 - lookupdealers - shipTolocation - locationId - 303030
+//carmax - 2345 - should be
+//trimzero from punchout
+//if >= 5 chars and start from 0
+//leave 4 chars
+
         $formattedAddressId = $addressId;
 
         // Special formatting for CarMax
@@ -291,6 +337,16 @@ class CxmlProcessor
     public function generateInvalidSharedSecretResponse(): string
     {
         return $this->generateErrorResponse('401', 'Invalid shared secret!');
+    }
+
+    /**
+     * Generate response for security violation with buyer cookie reuse
+     *
+     * @return string XML response
+     */
+    public function generateBuyerCookieReuseResponse(): string
+    {
+        return $this->generateErrorResponse('403', 'Security violation: This buyer cookie is already associated with a different partner');
     }
 
     /**

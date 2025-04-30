@@ -1,6 +1,6 @@
 <?php
 /**
- * @var \Magento\Framework\View\Element\Template $block
+ * @var \Tirehub\Punchout\Block\Portal\Address $block
  */
 ?>
 
@@ -25,12 +25,12 @@
         <div class="label">{{ t('Ship to Location') }}</div>
         <div class="punchout-location-select">
             <vue-select
-                class="custom-vue-select"
-                :options="locationOptions"
-                :searchable="true"
-                label="label"
-                id="location-select"
-                v-model="selectedLocation">
+                    class="custom-vue-select"
+                    :options="locationOptions"
+                    :searchable="true"
+                    label="label"
+                    id="location-select"
+                    v-model="selectedLocation">
             </vue-select>
             <button class="primary-btn small" :disabled="!locationId" @click.stop.prevent="onLocationSelect">
                 {{ t('Select') }}
@@ -40,6 +40,5 @@
     <form :action="locationSelectUrl" ref="locationSelectForm" method="POST">
         <?php echo $block->getBlockHtml('formkey'); ?>
         <input type="hidden" name="locationId" :value="locationId" />
-        <input type="hidden" name="cookie" :value="cookie" />
     </form>
 </div>

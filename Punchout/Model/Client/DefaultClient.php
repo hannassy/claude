@@ -20,9 +20,14 @@ use Tirehub\Punchout\Api\EnablePunchoutModeInterface;
 use Tirehub\Punchout\Service\GetPunchoutPartnersManagement;
 use Tirehub\Punchout\Api\CreateCustomerInterface;
 use Tirehub\Punchout\Model\Validator\Dealer as DealerValidator;
+use Tirehub\Punchout\Service\TokenGenerator;
 
 class DefaultClient extends AbstractClient implements ClientInterface
 {
+    public const CONTENT_TYPE_TEXT_XML = 'text/xml';
+
+    protected ?string $identity = null;
+
     public function __construct(
         protected readonly RawFactory $rawFactory,
         protected readonly RedirectFactory $redirectFactory,
@@ -42,7 +47,8 @@ class DefaultClient extends AbstractClient implements ClientInterface
         protected readonly \Tirehub\Punchout\Model\ResourceModel\Item $itemResource,
         protected readonly \Tirehub\Punchout\Model\ResourceModel\Item\CollectionFactory $itemCollectionFactory,
         protected readonly \Magento\Checkout\Model\Cart $cart,
-        protected readonly \Magento\Catalog\Api\ProductRepositoryInterface $productRepository
+        protected readonly \Magento\Catalog\Api\ProductRepositoryInterface $productRepository,
+        protected readonly TokenGenerator $tokenGenerator
     ) {
         parent::__construct(
             $sessionFactory,
@@ -215,7 +221,22 @@ class DefaultClient extends AbstractClient implements ClientInterface
     {
         try {
             $content = $request->getContent();
-            $parsedData = $this->cxmlProcessor->parseRequest($content);
+
+            try {
+                $parsedData = $this->cxmlProcessor->parseRequest($content);
+            } catch (LocalizedException $e) {
+                // Check if the exception is specifically for buyer cookie reuse
+                if (str_contains($e->getMessage(), 'Security violation: This buyer cookie has already been used')) {
+                    $this->logger->warning('Punchout: Security violation - buyer cookie reuse detected');
+                    $result = $this->rawFactory->create();
+                    $responseXml = $this->cxmlProcessor->generateBuyerCookieReuseResponse();
+                    $result->setHeader('Content-Type', self::CONTENT_TYPE_TEXT_XML);
+                    $result->setHttpResponseCode(403);
+                    $result->setContents($responseXml);
+                    return $result;
+                }
+                throw $e;
+            }
 
             // Validate credentials
             $this->cxmlProcessor->validateCredentials(
@@ -250,10 +271,10 @@ class DefaultClient extends AbstractClient implements ClientInterface
             if (!$addressId) {
                 $this->logger->info('Punchout: No valid addressID found, redirecting to portal');
 
-                // Generate portal URL with the session buyer_cookie
-                $portalUrl = $this->urlBuilder->getUrl('punchout/portal', ['cookie' => $buyerCookie]);
+                // Generate secure portal URL with the session buyer_cookie
+                $portalUrl = $this->tokenGenerator->generatePortalUrl($buyerCookie);
 
-                // Generate response with portal URL
+                // Generate response with secure portal URL
                 $result = $this->rawFactory->create();
                 $responseXml = $this->cxmlProcessor->generateSuccessResponse($portalUrl);
 
@@ -270,9 +291,9 @@ class DefaultClient extends AbstractClient implements ClientInterface
             $session->setData(SessionInterface::CUSTOMER_ID, $customerId);
             $this->sessionResource->save($session);
 
-            // Generate response with shopping URL
+            // Generate response with secure shopping URL
             $result = $this->rawFactory->create();
-            $shoppingUrl = $this->urlBuilder->getUrl('punchout/shopping/start', ['cookie' => $buyerCookie]);
+            $shoppingUrl = $this->tokenGenerator->generateShoppingStartUrl($buyerCookie);
 
             $responseXml = $this->cxmlProcessor->generateSuccessResponse($shoppingUrl);
 

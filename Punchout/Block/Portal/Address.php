@@ -11,6 +11,8 @@ use Tirehub\Punchout\Api\Data\SessionInterface;
 use Tirehub\ApiMiddleware\Api\Request\LookupCommonDealersInterface;
 use Magento\Framework\Logger\Monolog;
 use Magento\Framework\Serialize\SerializerInterface;
+use Magento\Framework\Session\SessionManagerInterface;
+use Tirehub\Punchout\Service\TokenGenerator;
 
 class Address extends Template
 {
@@ -23,6 +25,8 @@ class Address extends Template
         private readonly LookupCommonDealersInterface $lookupCommonDealers,
         private readonly Monolog $logger,
         private readonly SerializerInterface $serializer,
+        private readonly SessionManagerInterface $session,
+        private readonly TokenGenerator $tokenGenerator,
         array $data = []
     ) {
         parent::__construct($context, $data);
@@ -30,7 +34,10 @@ class Address extends Template
 
     public function getBuyerCookie(): string
     {
-        return $this->serializer->serialize($this->request->getParam('cookie', ''));
+        // Get the buyer cookie from session storage instead of request
+        $buyerCookie = $this->session->getData('punchout_buyer_cookie') ?? '';
+
+        return $this->serializer->serialize($buyerCookie);
     }
 
     public function getErrorMessage(): string
@@ -40,7 +47,8 @@ class Address extends Template
 
     public function getSession()
     {
-        $buyerCookie = $this->request->getParam('cookie', '');
+        // Get the buyer cookie from session storage
+        $buyerCookie = $this->session->getData('punchout_buyer_cookie') ?? '';
         if (empty($buyerCookie)) {
             return null;
         }
@@ -112,5 +120,27 @@ class Address extends Template
         $session = $this->getSession();
 
         return $this->serializer->serialize($session->getData(SessionInterface::PARTNER_IDENTITY));
+    }
+
+    /**
+     * Generate a secure submit URL with token
+     *
+     * @return string
+     */
+    public function getSecureSubmitUrl(): string
+    {
+        $buyerCookie = $this->session->getData('punchout_buyer_cookie') ?? '';
+        if (empty($buyerCookie)) {
+            return $this->getUrl('punchout/portal/submit');
+        }
+
+        // Generate a token for the submit action
+        try {
+            $token = $this->tokenGenerator->generateToken($buyerCookie);
+            return $this->getUrl('punchout/portal/submit', ['token' => $token]);
+        } catch (\Exception $e) {
+            $this->logger->error('Punchout: Error generating secure submit URL: ' . $e->getMessage());
+            return $this->getUrl('punchout/portal/submit');
+        }
     }
 }

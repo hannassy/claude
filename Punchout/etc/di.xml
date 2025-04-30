@@ -6,6 +6,23 @@
     <preference for="Tirehub\Punchout\Api\CreateCustomerInterface" type="Tirehub\Punchout\Service\CreateCustomer"/>
     <preference for="Tirehub\Punchout\Api\GetTempPoInterface" type="Tirehub\Punchout\Service\GetTempPo"/>
 
+    <!-- Token generator service -->
+    <type name="Tirehub\Punchout\Service\TokenGenerator">
+        <arguments>
+            <argument name="encryptor" xsi:type="object">Magento\Framework\Encryption\Encryptor</argument>
+            <argument name="urlBuilder" xsi:type="object">Magento\Framework\UrlInterface</argument>
+            <argument name="logger" xsi:type="object">Magento\Framework\Logger\Monolog</argument>
+        </arguments>
+    </type>
+
+    <!-- TokenGenerator dependency for DefaultClient -->
+    <type name="Tirehub\Punchout\Model\Client\DefaultClient">
+        <arguments>
+            <argument name="tokenGenerator" xsi:type="object">Tirehub\Punchout\Service\TokenGenerator</argument>
+        </arguments>
+    </type>
+
+    <!-- Existing plugins -->
     <type name="Silk\Checkout\Model\Relation">
         <plugin name="prevent_split_order" type="Tirehub\Punchout\Plugin\Checkout\PreventSplitOrder" sortOrder="1"/>
     </type>
@@ -15,6 +32,7 @@
                 sortOrder="1"/>
     </type>
 
+    <!-- Existing collection factory configuration -->
     <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
         <arguments>
             <argument name="collections" xsi:type="array">
