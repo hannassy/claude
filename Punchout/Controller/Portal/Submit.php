@@ -12,7 +12,6 @@ use Magento\Framework\Logger\Monolog;
 use Tirehub\Punchout\Service\GetClient;
 use Tirehub\Punchout\Model\SessionFactory;
 use Tirehub\Punchout\Api\Data\SessionInterface;
-use Magento\Framework\Message\Manager as MessageManager;
 use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Framework\App\Action\Context;
 use Magento\Framework\App\Action\Action;
@@ -24,21 +23,21 @@ class Submit extends Action implements HttpPostActionInterface
     public const TOKEN_PARAM = 'token';
 
     public function __construct(
+        Context $context,
         private readonly RequestInterface $request,
         private readonly GetClient $getClient,
         private readonly SessionFactory $sessionFactory,
         private readonly Monolog $logger,
         private readonly EncryptorInterface $encryptor,
         private readonly SessionManagerInterface $session,
-        private readonly TokenGenerator $tokenGenerator,
-        Context $context
+        private readonly TokenGenerator $tokenGenerator
     ) {
         parent::__construct($context);
     }
 
     public function execute(): Redirect
     {
-        $addressId = $this->request->getParam('locationId');
+        $addressId = $this->getRequest()->getParam('locationId');
         $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
 
         try {
@@ -106,7 +105,7 @@ class Submit extends Action implements HttpPostActionInterface
     private function validateAndGetBuyerCookie(): string
     {
         // Check for the encrypted token first
-        $token = $this->request->getParam(self::TOKEN_PARAM);
+        $token = $this->getRequest()->getParam(self::TOKEN_PARAM);
         if (!empty($token)) {
             try {
                 $decrypted = $this->encryptor->decrypt(base64_decode($token));
@@ -140,7 +139,7 @@ class Submit extends Action implements HttpPostActionInterface
         }
 
         // For backward compatibility, check if cookie parameter exists
-        $buyerCookie = $this->request->getParam('cookie');
+        $buyerCookie = $this->getRequest()->getParam('cookie');
         if (empty($buyerCookie)) {
             // Last resort, check session storage
             $buyerCookie = $this->session->getData('punchout_buyer_cookie');
@@ -160,6 +159,9 @@ class Submit extends Action implements HttpPostActionInterface
         $this->logger->info('Punchout: Using cookie parameter for portal submit', [
             'buyer_cookie' => $buyerCookie
         ]);
+
+        // Set the buyer cookie for downstream processing
+        $this->request->setParam('cookie', $buyerCookie);
 
         return $buyerCookie;
     }

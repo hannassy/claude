@@ -12,6 +12,7 @@ use Tirehub\ApiMiddleware\Api\Request\LookupDealersInterface;
 use Exception;
 use Tirehub\Punchout\Model\SessionFactory;
 use Tirehub\Punchout\Api\Data\SessionInterface;
+use Tirehub\Punchout\Model\Config;
 
 class CxmlProcessor
 {
@@ -20,7 +21,8 @@ class CxmlProcessor
         private readonly Monolog $logger,
         private readonly CredentialsValidator $credentialsValidator,
         private readonly LookupDealersInterface $lookupDealers,
-        private readonly SessionFactory $sessionFactory
+        private readonly SessionFactory $sessionFactory,
+        private readonly Config $config
     ) {
     }
 
@@ -97,7 +99,7 @@ class CxmlProcessor
             }
 
             // Return parsed data
-            return [
+            $result = [
                 'from' => [
                     'domain' => $fromDomain,
                     'identity' => $fromIdentity
@@ -116,6 +118,13 @@ class CxmlProcessor
                 'browser_form_post_url' => $browserFormPostUrl,
                 'address_id' => $addressId
             ];
+
+            // If debug mode is enabled, store the raw cXML request
+            if ($this->config->isDebugMode()) {
+                $result['cxml_request'] = $content;
+            }
+
+            return $result;
         } catch (LocalizedException $e) {
             $this->logger->error('Punchout: ' . $e->getMessage());
             throw $e;
@@ -266,19 +275,20 @@ class CxmlProcessor
             }
         }
 
-        //>= 123456 - CMX_1234 - lookupdealers - shipTolocation - locationId - 303030
-//carmax - 2345 - should be
-//trimzero from punchout
-//if >= 5 chars and start from 0
-//leave 4 chars
-
         $formattedAddressId = $addressId;
+        $trimLeadingZeroFromDealerCode = $partner['trimLeadingZeroFromDealerCode'] ?? false;
+        if ($trimLeadingZeroFromDealerCode
+            && strlen($addressId) >= 5
+            && str_starts_with($addressId, '0')
+        ) {
+            $formattedAddressId = substr($addressId, 1, 4);
+        }
 
         // Special formatting for CarMax
         if ($senderIdentity === 'carmax') {
-            // For CarMax: use only first 4 characters if address is 6 characters
-            if (strlen($addressId) === 6) {
-                $formattedAddressId = substr($addressId, 0, 4);
+            // For CarMax: use only 4 characters if address is greater then 6 characters start from 2nd
+            if (strlen($addressId) >= 6) {
+                $formattedAddressId = substr($addressId, 1, 4);
             }
         }
 

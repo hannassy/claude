@@ -14,26 +14,22 @@ use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\App\Action\Context;
 use Magento\Framework\App\Action\Action;
-use Magento\Framework\Message\ManagerInterface;
 use Magento\Framework\Logger\Monolog;
 use Tirehub\Punchout\Api\Data\SessionInterface;
-use Magento\Framework\Session\SessionManagerInterface;
 
 class Start extends Action implements HttpGetActionInterface
 {
     public const TOKEN_PARAM = 'token';
 
     public function __construct(
-        private readonly RequestInterface $request,
-        private readonly ResultFactory $resultFactory,
-        private readonly GetClient $getClient,
-        private readonly SessionFactory $sessionFactory,
-        private readonly CustomerSession $customerSession,
-        private readonly DisablePunchoutModeInterface $disablePunchoutMode,
-        private readonly EncryptorInterface $encryptor,
-        private readonly Monolog $logger,
-        private readonly SessionManagerInterface $session,
-        Context $context
+        Context $context,
+        private RequestInterface $request,
+        private GetClient $getClient,
+        private SessionFactory $sessionFactory,
+        private CustomerSession $customerSession,
+        private DisablePunchoutModeInterface $disablePunchoutMode,
+        private EncryptorInterface $encryptor,
+        private Monolog $logger
     ) {
         parent::__construct($context);
     }
@@ -65,6 +61,7 @@ class Start extends Action implements HttpGetActionInterface
             // Fallback to home page if no valid cookie
             $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
             return $resultRedirect->setPath('/customer/account');
+
         } catch (LocalizedException $e) {
             $this->logger->error('Punchout: Error in shopping start: ' . $e->getMessage());
             $this->messageManager->addErrorMessage($e->getMessage());
@@ -111,6 +108,7 @@ class Start extends Action implements HttpGetActionInterface
                 $this->request->setParam('cookie', $buyerCookie);
 
                 return $buyerCookie;
+
             } catch (\Exception $e) {
                 $this->logger->error('Punchout: Token validation error: ' . $e->getMessage());
                 throw new LocalizedException(__('Invalid or expired token'));

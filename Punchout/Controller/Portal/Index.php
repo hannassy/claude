@@ -7,7 +7,6 @@ use Magento\Framework\App\Action\Context;
 use Magento\Framework\App\Action\HttpGetActionInterface;
 use Magento\Framework\App\Action\Action;
 use Magento\Framework\Controller\ResultFactory;
-use Magento\Framework\View\Result\Page;
 use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Tirehub\Punchout\Api\DisablePunchoutModeInterface;
@@ -21,17 +20,17 @@ class Index extends Action implements HttpGetActionInterface
     public const TOKEN_PARAM = 'token';
 
     public function __construct(
+        Context $context,
         private readonly DisablePunchoutModeInterface $disablePunchoutMode,
         private readonly EncryptorInterface $encryptor,
         private readonly SessionFactory $sessionFactory,
         private readonly Monolog $logger,
-        private readonly SessionManagerInterface $session,
-        Context $context
+        private readonly SessionManagerInterface $session
     ) {
         parent::__construct($context);
     }
 
-    public function execute(): Page
+    public function execute()
     {
         $this->disablePunchoutMode->execute();
 
@@ -40,6 +39,7 @@ class Index extends Action implements HttpGetActionInterface
             $this->validateRequest();
 
             return $this->resultFactory->create(ResultFactory::TYPE_PAGE);
+
         } catch (LocalizedException $e) {
             $this->logger->error('Punchout: Error in portal access: ' . $e->getMessage());
             $this->messageManager->addErrorMessage($e->getMessage());
@@ -117,6 +117,7 @@ class Index extends Action implements HttpGetActionInterface
             $this->logger->info('Punchout: Successfully validated secure token for portal', [
                 'buyer_cookie' => $buyerCookie
             ]);
+
         } catch (\Exception $e) {
             $this->logger->error('Punchout: Token validation error: ' . $e->getMessage());
             throw new LocalizedException(__('Invalid or expired token'));
