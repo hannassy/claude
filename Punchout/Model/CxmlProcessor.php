@@ -248,17 +248,17 @@ class CxmlProcessor
 
         try {
             $result = $this->lookupDealers->execute(['dealerCode' => $formattedAddressId]);
-            $resultDealerCode = $result['results'][0]['dealerCode'] ?? null;
+            $resultDealerCode = $result['results'][0]['shipToLocation']['locationId'] ?? null;
 
             if (!$resultDealerCode) {
                 throw new LocalizedException(__('Dealer with addressId="%1" was not found', $formattedAddressId));
             }
         } catch (Exception $e) {
             $this->logger->error('Punchout: ' . $e->getMessage());
-            $formattedAddressId = null;
+            $resultDealerCode = null;
         }
 
-        return $formattedAddressId;
+        return $resultDealerCode;
     }
 
     /**

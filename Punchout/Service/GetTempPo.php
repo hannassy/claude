@@ -45,7 +45,7 @@ class GetTempPo implements GetTempPoInterface
             }
 
             // Generate unique temppo
-            $temppo = self::TEMPPPO_PREFIX . hash('sha256', $session->getId());
+            $temppo = self::TEMPPPO_PREFIX . substr(hash('sha256', $session->getId()), 0, 38);
 
             // Update session
             $session->setData(SessionInterface::TEMPPO, $temppo);
