@@ -39,7 +39,7 @@ class Dealer
         $dealerCode = str_replace($dealerPrefix, '', $dealerCode);
 
         $result = $this->lookupDealers->execute(['dealerCode' => $dealerCode]);
-        $resultDealerCode = $result['results']['dealerCode'] ?? null;
+        $resultDealerCode = $result['results'][0]['shipToLocation']['locationId'] ?? null;
 
         if (!$resultDealerCode) {
             throw new LocalizedException(__('Dealer not found'));

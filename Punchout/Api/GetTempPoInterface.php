@@ -5,5 +5,6 @@ namespace Tirehub\Punchout\Api;
 
 interface GetTempPoInterface
 {
+    public const TEMPPPO_PREFIX = 'TEMPPO';
     public function execute(): string;
 }

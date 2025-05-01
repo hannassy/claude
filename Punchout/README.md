@@ -1,122 +1,125 @@
-What is PunchOut?
+# TireHub Punchout - QA Testing Guide
+
+## What is PunchOut?
 
 PunchOut is a procurement integration protocol that allows users from a procurement system to "punch out" to our eCommerce store, shop, and then return to their procurement system with their cart/order details. The entire process uses the cXML (Commerce XML) format for data exchange.
 
-Our Implementation Flow
+## Punchout Flow Overview
 
-Our PunchOut implementation has two main entry points:
+The punchout process follows this general flow:
 
-1. Optional Pre-PunchOut Item Setup
+1. **Initial Request**: The procurement system sends a cXML request to TireHub
+2. **Authentication**: TireHub validates the credentials and partner information
+3. **User Experience**: The user is directed to either:
+    - Address selection page (if no valid address was provided)
+    - Direct shopping experience (if valid address was provided)
+4. **Shopping**: User browses and adds products to cart
+5. **Return**: User clicks "Return to Procurement System" to send cart data back
 
-Endpoint: /punchout/setup/item
+## Key Components to Test
 
-Purpose: Allows saving items the customer wants to buy before the PunchOut process starts
+### 1. Entry Points
 
-Required Parameters:
+There are two main entry points to the punchout system:
 
-dealerCode
+#### A. Pre-PunchOut Item Setup (Optional) (NOT READY FOR TESTING)
+- **Endpoint**: `/punchout/setup/item`
+- **Purpose**: Save items that customer wants to buy before the punchout process
+- **Required Parameters**:
+    - `dealerCode` - The code identifying the dealer
+    - `partnerIdentity` - The identity of the punchout partner
+    - `itemId` - Product to be added to cart
+    - `quantityNeeded` - Quantity of product
 
-partnerIdentity
+#### B. PunchOut Request Processing
+- **Endpoint**: `/punchout/setup/request`
+- **Purpose**: Process cXML request from procurement system
+- **Method**: POST
+- **Content**: cXML document (see sample in test scenarios)
 
-Optional Parameters:
+### 2. Address Handling
 
-itemId
+How TireHub handles ShipTo addressId information:
 
-quantityNeeded
+- Each partner has a `dealerPrefix` value (e.g., "CVN_" for Carvana) from `api/cache/getpunchoutpartners`
+- We take addressId (e.g., 123456) and combine with dealer prefix (CVN_123456)
+- For CarMax with addressId length equal or greater then 6, we take only 4 digits start from second (123456 → 2345) and add dealer prefix CMX_
+- If address equal or greater then 5 and starts from 0 and `trimLeadingZeroFromDealerCode` from `api/cache/getpunchoutpartners` is tru
+  - we remove 0 and take 4 next digits (012345 → 1234) 
+- Received addressId we validate via `/api/cache/lookupdealers`
+  - from result we take `shipToLocation`->`locationId` which will be used as a standard dealerCode for us and for creating customer
 
-2. PunchOut Request Processing
+### 3. Flow Scenarios
 
-Endpoint: /punchout/setup/request
+There are two main flow scenarios to test:
 
-Purpose: Receives and processes the cXML PunchOutSetupRequest from procurement systems
+#### A. Address Selection Flow
+- Triggered when ShipTo->addressID is empty or dealer not found
+- User is sent to `/punchout/portal` to select an address
+- After address selection, a customer account is created
+- User is redirected to the main shopping page in PunchOut mode
 
-The flow consists of these steps:
+#### B. Direct Shopping Flow
+- Triggered when ShipTo->addressID is valid
+- Customer account is created directly
+- User is sent to `/punchout/shopping/start`
+- User is redirected to the main shopping page in PunchOut mode
+- for CarMax automatically adding to cart items from Pre-PunchOut Item Setup (NOT READY FOR TESTING)
 
-Receive cXML request from procurement system (typically through PunchOut testing tools like
-cXML PunchOut Tester )
-
-Validate credentials (domain, identity, sharedSecret) against authorized partners
-
-Partner list is retrieved from /api/cache/getpunchoutpartners
-
-Save details from the cXML request to our database for subsequent steps
-
-Process the ShipTo address information:
-
-each partner has dealerPrefix value in /api/cache/getpunchoutpartners
-
-for Carvana - "dealerPrefix": "CVN_" it means we take addressId for example 111111 and combine with dealer prefix and it become CVN_111111 and this dealer code we validate via /api/cache/lookupdealers
-
-for CarMax if addressId length is 6 - we take only first 4 letters (123456 - we take 1234) and add dealer prefix CMX_
-
-If ShipTo->addressID is empty or dealer not found via /api/cache/lookupdealers :
-
-Send response with PunchOutSetupResponse->StartPage URL set to /punchout/portal
-
-Customer is redirected to this page to select an address
-
-After submission, create a customer with the selected dealer code and redirect to home page in PunchOut mode
-
-Dealer codes are retrieved from /api/cache/lookupcommondealers
-
-The dealer code for the request comes from /api/cache/getpunchoutpartners (corpAddressId field)
-
-If ShipTo->addressID is valid:
-
-Create a customer directly
-
-Send response with PunchOutSetupResponse->StartPage URL set to /punchout/shopping/start
-
-Customer is redirected directly to home page in PunchOut mode
-
-Testing Endpoints
-
-Pre-PunchOut Setup: /punchout/setup/item
-
-can be used via browser at this point directly - http://qa2-now.tirehubonline.com/punchout/setup/item?dealerCode=111111&partnerIdentity=test&itemId=test&quantityNeeded=1
-
-cXML Processing: /punchout/setup/request
-
-can be used from tool or from postman (but you will not be redirected to next step)
-
-Address Selection (if needed): /punchout/portal
-
-http://qa2-now.tirehubonline.com/punchout/portal?cookie=99df85a3c958a552b26ba6dc04a9242f
-
-can be used from browser directly with BuyerCookie value if you made cXML request for previous step
-
-Shopping Start: /punchout/shopping/start
-
-http://qa2-now.tirehubonline.com/punchout/portal?cookie=99df85a3c958a552b26ba6dc04a9242f
-
-can be used from browser directly with BuyerCookie value if you made cXML request for previous step
-
-Test Scenarios
-
-1. Basic PunchOut Setup Request
-
-Objective: Verify that the system correctly processes a valid PunchOutSetupRequest and returns a valid response.
-
-Steps:
-
-Send a valid cXML PunchOutSetupRequest to /punchout/setup/request
-
-Verify the response has a 200 status code
-
-Verify the response contains a valid PunchOutSetupResponse with a URL
-
-Access the URL and verify you land on the store in a PunchOut session
-
-Expected Result:
-
-XML response contains a valid StartPage URL
-
-The URL loads the store in a PunchOut session
-
-Sample Request:
+### 4. Return Process
+- When user finishes shopping, they click "Trasfer Cart"
+- We follow standard process with creating magento and API order via `createorderstructure`
+  - `poNum` generate random uniq string which starts from TEMMPO
+    - length of this field should be 44 symbols or less
+- Cart data is formatted as cXML
+- Terminate customer session
+  - `erp_order_number` and `temmpo` reflects in punchout session table for debugging
+- User is redirected back to procurement system via `BrowserFormPost->URL`
+- Data includes all cart items with necessary information for ordering
 
 
+## Testing Endpoints
 
+Use these endpoints for testing different stages of the punchout process:
+
+1. **Pre-PunchOut Setup**:
+    - URL: `/punchout/setup/item?dealerCode=111111&partnerIdentity=test&itemId=test&quantityNeeded=1`
+    - Can be accessed directly in browser for testing
+    - as a result should return BuyerCookie which should be used for next step
+
+2. **cXML Processing**:
+    - URL: `/punchout/setup/request`
+    - Requires cXML POST request (use Postman or testing tool)
+
+3. **Address Selection**:
+    - URL: `/punchout/portal?cookie=99df85a3c958a552b26ba6dc04a9242f`
+    - Requires a valid BuyerCookie from previous cXML request
+    - not able for direct access since buyer cookie now is encrypted due to security
+
+4. **Shopping Start**:
+    - URL: `/punchout/shopping/start?cookie=99df85a3c958a552b26ba6dc04a9242f`
+    - Requires a valid BuyerCookie from previous cXML request
+    - not able for direct access since buyer cookie now is encrypted due to security
+
+## Test Scenarios
+
+### 1. Basic PunchOut Setup Request
+
+**Objective**: Verify the system correctly processes a valid PunchOutSetupRequest.
+
+**Steps**:
+1. Send cXML PunchOutSetupRequest to `/punchout/setup/request`
+2. Verify response has 200 status code
+3. Verify response contains valid PunchOutSetupResponse with URL
+4. Access URL and verify landing on store in PunchOut mode
+
+**Expected Result**:
+- XML response contains valid StartPage URL
+- URL loads store in PunchOut mode
+
+**Sample Request**:
+
+```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.014/cXML.dtd">
 <cXML xml:lang="en-US" payloadID="1726950849.0571427@prd760app55.int.coupahost.com" timestamp="2024-09-21T16:34:09-04:00">
@@ -132,7 +135,7 @@ Sample Request:
             </Credential>
         </To>
         <Sender>
-            <Credential domain="NetworkID">
+            <Credential domain="domainFromApi">
                 <Identity>identityFromApi</Identity>
                 <SharedSecret>SharedSecretFromApi</SharedSecret>
             </Credential>
@@ -184,134 +187,107 @@ Sample Request:
         </PunchOutSetupRequest>
     </Request>
 </cXML>
-2. Pre-PunchOut Item Setup
+```
 
-Objective: Verify that the system correctly handles pre-PunchOut item setup.
+### 2. Pre-PunchOut Item Setup
 
-Steps:
+**Objective**: Verify pre-punchout item setup works correctly.
 
-Send a request to /punchout/setup/item with required parameters:
+**Steps**:
+1. Send request to `/punchout/setup/item` with required parameters
+2. Initiate PunchOut flow
+3. Verify items appear in cart
 
-dealerCode (required)
+**Expected Result**:
+- Item information successfully saved
+- When entering PunchOut session, pre-saved items appear in cart
 
-partnerIdentity (required)
+### 3. Address Selection Flow
 
-itemId (optional)
+**Objective**: Verify address selection process when no addressID is provided.
 
-quantityNeeded (optional)
+**Steps**:
+1. Send cXML request without ShipTo addressID
+2. Verify redirect to `/punchout/portal`
+3. Select address from options
+4. Verify customer creation with selected dealer code
+5. Verify redirect to home page in PunchOut mode
 
-Verify the system successfully saves the item information
+**Expected Result**:
+- User directed to address selection page
+- After selection, customer created
+- User redirected to shopping experience
 
-Initiate PunchOut flow and verify pre-saved items appear in the cart
+### 4. Direct Shopping Flow
 
-Expected Result:
+**Objective**: Verify direct shopping when valid addressID is provided.
 
-Item information is successfully saved
+**Steps**:
+1. Send cXML request with valid ShipTo addressID
+2. Verify redirect to `/punchout/shopping/start`
+3. Verify customer creation
+4. Verify redirect to home page in PunchOut mode
 
-When the user enters the PunchOut session, the pre-saved items are already in their cart
+**Expected Result**:
+- Customer created directly without address selection
+- User redirected directly to shopping experience
 
-3. Address Selection Flow
+### 5. Partner Validation
 
-Objective: Verify that the system correctly handles the address selection process when no addressID is provided.
+**Objective**: Verify validation of PunchOut partners.
 
-Steps:
+**Steps**:
+1. Send cXML request with valid partner credentials
+2. Send cXML request with invalid partner credentials
 
-Send a valid cXML PunchOutSetupRequest to /punchout/setup/request without a ShipTo addressID
+**Expected Result**:
+- Valid partner credentials accepted
+- Invalid partner credentials rejected with error
 
-Verify the response directs to /punchout/portal
+### 6. Return Process Testing
 
-Select an address from the options presented
+**Objective**: Verify "Transfer Cart" process.
 
-Verify the system creates a customer with the selected dealer code
+**Steps**:
+1. Complete PunchOut session setup
+2. Add items to cart
+3. Click "Transfer Cart" button
+4. Verify cart data format and redirection
 
-Verify redirection to the home page in PunchOut mode
+**Expected Result**:
+- Cart data correctly formatted
+- User redirected to procurement system
 
-Expected Result:
+### 7. Error Handling
 
-User is directed to the address selection page
+**Objective**: Verify handling of error conditions.
 
-After address selection, a customer is created
+**Scenarios to test**:
+- Malformed XML request
+- Missing required elements
+- Invalid partner credentials
+- Invalid dealer codes
+- System errors during processing
 
-User is redirected to the shopping experience
+**Expected Result**:
+- Appropriate error responses with clear messages
+- No server crashes or unexpected behavior
 
-4. Direct Shopping Flow
+## Debugging Tips
 
-Objective: Verify that the system correctly handles direct shopping when a valid addressID is provided.
+1. Check for proper credentials in the cXML request
+2. Ensure dealer code format matches partner expectations
+3. Look for valid ShipTo address format
+4. Verify BrowserFormPost URL is present and valid
+5. Check for BuyerCookie uniqueness
+6. If you use the same BuyerCookie again - it triggers error
 
-Steps:
+## Customer creating process
 
-Send a valid cXML PunchOutSetupRequest to /punchout/setup/request with a valid ShipTo addressID
+**Email**:
+- Format should be `Punchout_dealerCode@tirehub.com` (example `Punchout_123456@tirehub.com`)
 
-Verify the response directs to /punchout/shopping/start
-
-Verify the system creates a customer with the provided information
-
-Verify redirection to the home page in PunchOut mode
-
-Expected Result:
-
-Customer is created directly without address selection
-
-User is redirected directly to the shopping experience
-
-5. Partner Validation
-
-Objective: Verify that the system correctly validates PunchOut partners against the API.
-
-Steps:
-
-Query /api/cache/getpunchoutpartners to retrieve authorized partners
-
-Send a cXML request with credentials matching an authorized partner
-
-Send another cXML request with credentials NOT matching any authorized partner
-
-Verify the system correctly accepts or rejects the requests
-
-Expected Result:
-
-Request with valid partner credentials is accepted
-
-Request with invalid partner credentials is rejected with appropriate error
-
-6. Return Process Testing
-
-Objective: Verify that the "Return to Procurement" process works correctly.
-
-Steps:
-
-Complete a valid PunchOut session setup
-
-Add items to cart in the store
-
-Click the "Return to Procurement System" button
-
-Verify the cart data is correctly formatted and sent back to the procurement system using the BrowserFormPost URL
-
-Expected Result:
-
-Cart data is correctly formatted
-
-User is redirected back to the procurement system via the BrowserFormPost URL
-
-7. Error Handling
-
-Objective: Verify that the system handles various error conditions appropriately.
-
-Scenarios to test:
-
-Malformed XML request
-
-Missing required elements
-
-Invalid partner credentials
-
-Invalid dealer codes
-
-System errors during processing
-
-Expected Result:
-
-Appropriate error responses with clear messages
-
-No server crashes or unexpected behavior
+**First and Last name**:
+- If cXML does not contain Extrinsics for example:
+  - `<Extrinsic name="FirstName">Jon</Extrinsic>` and `<Extrinsic name="LastName">Dou</Extrinsic>`
+  - we set up First name as `Punchout` and Last name as `User`

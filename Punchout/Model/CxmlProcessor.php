@@ -6,23 +6,18 @@ namespace Tirehub\Punchout\Model;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Logger\Monolog;
 use Tirehub\Punchout\Model\Validator\Credentials as CredentialsValidator;
-use Tirehub\Punchout\Service\GetPunchoutPartnersManagement;
 use SimpleXMLElement;
-use Tirehub\ApiMiddleware\Api\Request\LookupDealersInterface;
-use Exception;
-use Tirehub\Punchout\Model\SessionFactory;
 use Tirehub\Punchout\Api\Data\SessionInterface;
-use Tirehub\Punchout\Model\Config;
+use Tirehub\Punchout\Service\ExtractAddressId;
 
 class CxmlProcessor
 {
     public function __construct(
-        private readonly GetPunchoutPartnersManagement $getPunchoutPartnersManagement,
         private readonly Monolog $logger,
         private readonly CredentialsValidator $credentialsValidator,
-        private readonly LookupDealersInterface $lookupDealers,
         private readonly SessionFactory $sessionFactory,
-        private readonly Config $config
+        private readonly Config $config,
+        private readonly ExtractAddressId $extractAddressId
     ) {
     }
 
@@ -263,58 +258,7 @@ class CxmlProcessor
             return null;
         }
 
-        $result = $this->getPunchoutPartnersManagement->getResult();
-        $partner = [];
-        $senderIdentity = strtolower($senderIdentity);
-
-        foreach ($result as $item) {
-            $identity = strtolower($item['identity'] ?? '');
-            if ($identity === strtolower($senderIdentity)) {
-                $partner = $item;
-                break;
-            }
-        }
-
-        $formattedAddressId = $addressId;
-        $trimLeadingZeroFromDealerCode = $partner['trimLeadingZeroFromDealerCode'] ?? false;
-        if ($trimLeadingZeroFromDealerCode
-            && strlen($addressId) >= 5
-            && str_starts_with($addressId, '0')
-        ) {
-            $formattedAddressId = substr($addressId, 1, 4);
-        }
-
-        // Special formatting for CarMax
-        if ($senderIdentity === 'carmax') {
-            // For CarMax: use only 4 characters if address is greater then 6 characters start from 2nd
-            if (strlen($addressId) >= 6) {
-                $formattedAddressId = substr($addressId, 1, 4);
-            }
-        }
-
-        $dealerPrefix = $partner['dealerPrefix'] ?? '';
-        $formattedAddressId = str_replace($dealerPrefix, '', $formattedAddressId);
-
-        // Apply dealer prefix if configured
-        if ($dealerPrefix) {
-            $formattedAddressId = $dealerPrefix . $formattedAddressId;
-        }
-
-        $this->logger->info("Punchout: Formatted addressID from '{$addressId}' to '{$formattedAddressId}'");
-
-        try {
-            $result = $this->lookupDealers->execute(['dealerCode' => $formattedAddressId]);
-            $resultDealerCode = $result['results'][0]['shipToLocation']['locationId'] ?? null;
-
-            if (!$resultDealerCode) {
-                throw new LocalizedException(__('Dealer with addressId="%1" was not found', $formattedAddressId));
-            }
-        } catch (Exception $e) {
-            $this->logger->error('Punchout: ' . $e->getMessage());
-            $resultDealerCode = null;
-        }
-
-        return $resultDealerCode;
+        return $this->extractAddressId->execute($addressId, $senderIdentity);
     }
 
     /**

@@ -13,8 +13,6 @@ use Psr\Log\LoggerInterface;
 
 class GetTempPo implements GetTempPoInterface
 {
-    private const TEMPPPO_PREFIX = 'TEMPPO';
-
     public function __construct(
         private readonly CustomerSession $customerSession,
         private readonly SessionCollectionFactory $sessionCollectionFactory,

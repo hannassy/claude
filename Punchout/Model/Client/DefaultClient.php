@@ -7,6 +7,7 @@ use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Controller\Result\RawFactory;
 use Magento\Framework\Controller\Result\RedirectFactory;
+use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\UrlInterface;
 use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Customer\Model\Session as CustomerSession;
@@ -21,12 +22,14 @@ use Tirehub\Punchout\Service\GetPunchoutPartnersManagement;
 use Tirehub\Punchout\Api\CreateCustomerInterface;
 use Tirehub\Punchout\Model\Validator\Dealer as DealerValidator;
 use Tirehub\Punchout\Service\TokenGenerator;
+use Tirehub\Punchout\Service\ExtractAddressId;
 
 class DefaultClient extends AbstractClient implements ClientInterface
 {
     public const CONTENT_TYPE_TEXT_XML = 'text/xml';
 
     protected ?string $identity = null;
+    private bool $debugItemRedirectUrl = true;
 
     public function __construct(
         protected readonly RawFactory $rawFactory,
@@ -48,7 +51,8 @@ class DefaultClient extends AbstractClient implements ClientInterface
         protected readonly \Tirehub\Punchout\Model\ResourceModel\Item\CollectionFactory $itemCollectionFactory,
         protected readonly \Magento\Checkout\Model\Cart $cart,
         protected readonly \Magento\Catalog\Api\ProductRepositoryInterface $productRepository,
-        protected readonly TokenGenerator $tokenGenerator
+        protected readonly TokenGenerator $tokenGenerator,
+        protected readonly ExtractAddressId $extractAddressId
     ) {
         parent::__construct(
             $sessionFactory,
@@ -61,9 +65,9 @@ class DefaultClient extends AbstractClient implements ClientInterface
      * Process item request for punchout
      *
      * @param RequestInterface $request
-     * @return \Magento\Framework\Controller\ResultInterface
+     * @return ResultInterface
      */
-    public function processItem(RequestInterface $request)
+    public function processItem(RequestInterface $request): ResultInterface
     {
         try {
             // Get required parameters
@@ -85,16 +89,14 @@ class DefaultClient extends AbstractClient implements ClientInterface
             ]);
 
             // Validate dealer code
-            try {
-                $this->dealerValidator->execute($dealerCode, $partnerIdentity);
-            } catch (\Exception $e) {
-                $this->logger->error('Punchout: Dealer validation failed: ' . $e->getMessage());
+            $dealerCode = $this->extractAddressId->execute($dealerCode, $partnerIdentity);
+            if (!$dealerCode) {
                 throw new LocalizedException(__('Invalid dealer code or partner identity'));
             }
 
             // Generate a unique buyerCookie (token) for this punchout session
             // This will be used as the buyerCookie in subsequent steps
-            $buyerCookie = hash('sha256', $partnerIdentity . $dealerCode . uniqid('', true));
+            $buyerCookie = md5($partnerIdentity . $dealerCode . uniqid('', true));
 
             // Check if we have multiple items (comma-separated)
             $itemIds = $itemId ? explode(',', $itemId) : [];
@@ -107,19 +109,22 @@ class DefaultClient extends AbstractClient implements ClientInterface
                 }
             }
 
+            $corpAddressId = $this->getCorpAddressId($partnerIdentity);
+
             // Create a new punchout session
             $session = $this->sessionFactory->create();
             $session->setData(SessionInterface::BUYER_COOKIE, $buyerCookie);
             $session->setData(SessionInterface::CLIENT_TYPE, 'default');
             $session->setData(SessionInterface::STATUS, SessionInterface::STATUS_NEW);
             $session->setData(SessionInterface::PARTNER_IDENTITY, $partnerIdentity);
-            $session->setData(SessionInterface::CORP_ADDRESS_ID, $dealerCode);
+            $session->setData(SessionInterface::CORP_ADDRESS_ID, $corpAddressId);
+            $session->setData(SessionInterface::ADDRESS_ID, $dealerCode);
             $this->sessionResource->save($session);
 
             // Get redirect URL from partner settings
             $redirectUrl = $this->getRedirectUrl($partnerIdentity);
 
-            if (empty($redirectUrl)) {
+            if (empty($redirectUrl) || $this->debugItemRedirectUrl) {
                 // If no redirect URL is configured, return success response
                 $result = $this->rawFactory->create();
                 $result->setHttpResponseCode(200);
@@ -129,7 +134,7 @@ class DefaultClient extends AbstractClient implements ClientInterface
             }
 
             // Add cookie parameter to redirect URL
-            $separator = (strpos($redirectUrl, '?') !== false) ? '&' : '?';
+            $separator = (str_contains($redirectUrl, '?')) ? '&' : '?';
             $redirectUrl .= $separator . 'cookie=' . $buyerCookie;
 
             // Redirect to partner URL
@@ -217,7 +222,13 @@ class DefaultClient extends AbstractClient implements ClientInterface
         return null;
     }
 
-    public function processRequest(RequestInterface $request)
+    /**
+     * Process request for punchout
+     *
+     * @param RequestInterface $request
+     * @return ResultInterface
+     */
+    public function processRequest(RequestInterface $request): ResultInterface
     {
         try {
             $content = $request->getContent();
@@ -326,7 +337,13 @@ class DefaultClient extends AbstractClient implements ClientInterface
         }
     }
 
-    public function processShoppingStart(RequestInterface $request)
+    /**
+     * Process shopping start for punchout
+     *
+     * @param RequestInterface $request
+     * @return ResultInterface
+     */
+    public function processShoppingStart(RequestInterface $request): ResultInterface
     {
         try {
             $buyerCookie = $request->getParam('cookie');
@@ -487,7 +504,13 @@ class DefaultClient extends AbstractClient implements ClientInterface
         }
     }
 
-    public function processPortalAddressSubmit(RequestInterface $request)
+    /**
+     * Process portal address submission
+     *
+     * @param RequestInterface $request
+     * @return ResultInterface
+     */
+    public function processPortalAddressSubmit(RequestInterface $request): ResultInterface
     {
         $buyerCookie = $request->getParam('cookie');
         $addressId = $request->getParam('locationId');

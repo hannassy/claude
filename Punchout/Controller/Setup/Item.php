@@ -8,6 +8,7 @@ use Magento\Framework\App\CsrfAwareActionInterface;
 use Magento\Framework\App\RequestInterface;
 use Tirehub\Punchout\Service\GetClient;
 use Magento\Framework\App\Request\InvalidRequestException;
+use Magento\Framework\Controller\ResultInterface;
 
 class Item implements HttpGetActionInterface, CsrfAwareActionInterface
 {
@@ -19,11 +20,13 @@ class Item implements HttpGetActionInterface, CsrfAwareActionInterface
 
     /**
      * Execute action
+     *
+     * @return ResultInterface
      */
-    public function execute()
+    public function execute(): ResultInterface
     {
         $client = $this->getClient->execute();
-        $client->processItem($this->request);
+        return $client->processItem($this->request);
     }
 
     /**
