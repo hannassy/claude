@@ -9,13 +9,13 @@ use Magento\Framework\Controller\ResultFactory;
 use Magento\Framework\Controller\Result\Redirect;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Logger\Monolog;
-use Tirehub\Punchout\Service\GetClient;
-use Tirehub\Punchout\Model\SessionFactory;
-use Tirehub\Punchout\Api\Data\SessionInterface;
 use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Framework\App\Action\Context;
 use Magento\Framework\App\Action\Action;
 use Magento\Framework\Session\SessionManagerInterface;
+use Tirehub\Punchout\Api\Data\SessionInterface;
+use Tirehub\Punchout\Model\SessionFactory;
+use Tirehub\Punchout\Model\Process\PortalAddressSubmit as PortalAddressSubmitProcess;
 use Tirehub\Punchout\Service\TokenGenerator;
 
 class Submit extends Action implements HttpPostActionInterface
@@ -25,7 +25,7 @@ class Submit extends Action implements HttpPostActionInterface
     public function __construct(
         Context $context,
         private readonly RequestInterface $request,
-        private readonly GetClient $getClient,
+        private readonly PortalAddressSubmitProcess $portalAddressSubmitProcess,
         private readonly SessionFactory $sessionFactory,
         private readonly Monolog $logger,
         private readonly EncryptorInterface $encryptor,
@@ -37,28 +37,33 @@ class Submit extends Action implements HttpPostActionInterface
 
     public function execute(): Redirect
     {
-        $addressId = $this->getRequest()->getParam('locationId');
-        $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
-
         try {
             // Get and validate buyer cookie from token or legacy param
             $buyerCookie = $this->validateAndGetBuyerCookie();
 
-            if (empty($addressId)) {
-                throw new LocalizedException(__('Please select an address'));
+            // At this point we have a validated buyer cookie, so pass it to the process
+            // Make sure the request has the cookie parameter for the process
+            $this->request->setParams(array_merge(
+                $this->request->getParams(),
+                ['cookie' => $buyerCookie]
+            ));
+
+            // Execute the address submission process
+            $result = $this->portalAddressSubmitProcess->execute($this->request);
+
+            // Ensure we're returning a Redirect object
+            if ($result instanceof Redirect) {
+                return $result;
             }
 
-            // Load session
-            $session = $this->sessionFactory->create();
-            $session->load($buyerCookie, SessionInterface::BUYER_COOKIE);
-
-            if (!$session->getId()) {
-                throw new LocalizedException(__('Invalid session'));
+            // If the result is not a Redirect, convert it to one
+            $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
+            if (method_exists($result, 'getUrl')) {
+                return $resultRedirect->setUrl($result->getUrl());
             }
 
-            // Process the address submission through the client
-            $client = $this->getClient->execute();
-            return $client->processPortalAddressSubmit($this->request);
+            // Default fallback
+            return $resultRedirect->setPath('');
         } catch (LocalizedException $e) {
             $this->logger->error('Punchout: Error in portal submit: ' . $e->getMessage());
 
@@ -68,6 +73,7 @@ class Submit extends Action implements HttpPostActionInterface
             if (isset($buyerCookie) && !empty($buyerCookie)) {
                 try {
                     $portalUrl = $this->tokenGenerator->generatePortalUrl($buyerCookie);
+                    $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
                     return $resultRedirect->setUrl($portalUrl);
                 } catch (\Exception $ex) {
                     $this->logger->error('Punchout: Error generating secure portal URL: ' . $ex->getMessage());
@@ -75,6 +81,7 @@ class Submit extends Action implements HttpPostActionInterface
             }
 
             // Fallback to simple redirect if token generation fails
+            $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
             return $resultRedirect->setPath('punchout/portal');
         } catch (\Exception $e) {
             $this->logger->error('Punchout: Unexpected error in portal submit: ' . $e->getMessage());
@@ -85,6 +92,7 @@ class Submit extends Action implements HttpPostActionInterface
             if (isset($buyerCookie) && !empty($buyerCookie)) {
                 try {
                     $portalUrl = $this->tokenGenerator->generatePortalUrl($buyerCookie);
+                    $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
                     return $resultRedirect->setUrl($portalUrl);
                 } catch (\Exception $ex) {
                     $this->logger->error('Punchout: Error generating secure portal URL: ' . $ex->getMessage());
@@ -92,6 +100,7 @@ class Submit extends Action implements HttpPostActionInterface
             }
 
             // Fallback to simple redirect if token generation fails
+            $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
             return $resultRedirect->setPath('punchout/portal');
         }
     }
@@ -127,9 +136,6 @@ class Submit extends Action implements HttpPostActionInterface
                     'buyer_cookie' => $buyerCookie
                 ]);
 
-                // Add the cookie to request for downstream processing
-                $this->request->setParam('cookie', $buyerCookie);
-
                 return $buyerCookie;
 
             } catch (\Exception $e) {
@@ -159,9 +165,6 @@ class Submit extends Action implements HttpPostActionInterface
         $this->logger->info('Punchout: Using cookie parameter for portal submit', [
             'buyer_cookie' => $buyerCookie
         ]);
-
-        // Set the buyer cookie for downstream processing
-        $this->request->setParam('cookie', $buyerCookie);
 
         return $buyerCookie;
     }

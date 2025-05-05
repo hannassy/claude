@@ -10,7 +10,7 @@ use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Controller\Result\RawFactory;
 use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Logger\Monolog;
-use Tirehub\Punchout\Service\GetClient;
+use Tirehub\Punchout\Model\Process\Request as RequestProcess;
 use Tirehub\Punchout\Model\CxmlProcessor;
 use Throwable;
 
@@ -19,7 +19,7 @@ class Request implements HttpPostActionInterface, CsrfAwareActionInterface
     public function __construct(
         private readonly RequestInterface $request,
         private readonly RawFactory $rawFactory,
-        private readonly GetClient $getClient,
+        private readonly RequestProcess $requestProcess,
         private readonly CxmlProcessor $cxmlProcessor,
         private readonly Monolog $logger
     ) {
@@ -58,8 +58,7 @@ class Request implements HttpPostActionInterface, CsrfAwareActionInterface
                 return $result;
             }
 
-            $client = $this->getClient->execute();
-            return $client->processRequest($this->request);
+            return $this->requestProcess->execute($this->request);
         } catch (Throwable $e) {
             $this->logger->error('Punchout: Error processing setup request: ' . $e->getMessage());
 

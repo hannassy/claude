@@ -6,16 +6,16 @@ namespace Tirehub\Punchout\Controller\Shopping;
 use Magento\Framework\App\Action\HttpGetActionInterface;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Controller\ResultFactory;
-use Tirehub\Punchout\Service\GetClient;
-use Tirehub\Punchout\Model\SessionFactory;
-use Magento\Customer\Model\Session as CustomerSession;
-use Tirehub\Punchout\Api\DisablePunchoutModeInterface;
-use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\App\Action\Context;
 use Magento\Framework\App\Action\Action;
 use Magento\Framework\Logger\Monolog;
+use Magento\Framework\Encryption\EncryptorInterface;
+use Magento\Customer\Model\Session as CustomerSession;
+use Tirehub\Punchout\Api\DisablePunchoutModeInterface;
+use Tirehub\Punchout\Model\SessionFactory;
 use Tirehub\Punchout\Api\Data\SessionInterface;
+use Tirehub\Punchout\Model\Process\ShoppingStart as ShoppingStartProcess;
 
 class Start extends Action implements HttpGetActionInterface
 {
@@ -23,13 +23,13 @@ class Start extends Action implements HttpGetActionInterface
 
     public function __construct(
         Context $context,
-        private RequestInterface $request,
-        private GetClient $getClient,
-        private SessionFactory $sessionFactory,
-        private CustomerSession $customerSession,
-        private DisablePunchoutModeInterface $disablePunchoutMode,
-        private EncryptorInterface $encryptor,
-        private Monolog $logger
+        private readonly RequestInterface $request,
+        private readonly ShoppingStartProcess $shoppingStartProcess,
+        private readonly SessionFactory $sessionFactory,
+        private readonly CustomerSession $customerSession,
+        private readonly DisablePunchoutModeInterface $disablePunchoutMode,
+        private readonly EncryptorInterface $encryptor,
+        private readonly Monolog $logger
     ) {
         parent::__construct($context);
     }
@@ -53,8 +53,7 @@ class Start extends Action implements HttpGetActionInterface
                 $session->load($buyerCookie, 'buyer_cookie');
 
                 if ($session->getId()) {
-                    $client = $this->getClient->execute();
-                    return $client->processShoppingStart($this->request);
+                    return $this->shoppingStartProcess->execute($this->request);
                 }
             }
 

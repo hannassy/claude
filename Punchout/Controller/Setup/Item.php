@@ -6,15 +6,15 @@ namespace Tirehub\Punchout\Controller\Setup;
 use Magento\Framework\App\Action\HttpGetActionInterface;
 use Magento\Framework\App\CsrfAwareActionInterface;
 use Magento\Framework\App\RequestInterface;
-use Tirehub\Punchout\Service\GetClient;
 use Magento\Framework\App\Request\InvalidRequestException;
 use Magento\Framework\Controller\ResultInterface;
+use Tirehub\Punchout\Model\Process\Item as ItemProcess;
 
 class Item implements HttpGetActionInterface, CsrfAwareActionInterface
 {
     public function __construct(
         private readonly RequestInterface $request,
-        private readonly GetClient $getClient
+        private readonly ItemProcess $itemProcess
     ) {
     }
 
@@ -25,8 +25,7 @@ class Item implements HttpGetActionInterface, CsrfAwareActionInterface
      */
     public function execute(): ResultInterface
     {
-        $client = $this->getClient->execute();
-        return $client->processItem($this->request);
+        return $this->itemProcess->execute($this->request);
     }
 
     /**
