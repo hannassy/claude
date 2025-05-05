@@ -23,6 +23,9 @@ use Tirehub\Punchout\Api\CreateCustomerInterface;
 use Tirehub\Punchout\Model\Validator\Dealer as DealerValidator;
 use Tirehub\Punchout\Service\TokenGenerator;
 use Tirehub\Punchout\Service\ExtractAddressId;
+use Tirehub\Checkout\Service\Management\LookupInventoryManagement;
+use Tirehub\Catalog\Api\RenderRegionalProductsInterface;
+use Magento\Framework\DataObject;
 
 class DefaultClient extends AbstractClient implements ClientInterface
 {
@@ -52,7 +55,9 @@ class DefaultClient extends AbstractClient implements ClientInterface
         protected readonly \Magento\Checkout\Model\Cart $cart,
         protected readonly \Magento\Catalog\Api\ProductRepositoryInterface $productRepository,
         protected readonly TokenGenerator $tokenGenerator,
-        protected readonly ExtractAddressId $extractAddressId
+        protected readonly ExtractAddressId $extractAddressId,
+        protected readonly LookupInventoryManagement $lookupInventoryManagement,
+        protected readonly RenderRegionalProductsInterface $renderRegionalProducts
     ) {
         parent::__construct(
             $sessionFactory,
@@ -446,22 +451,7 @@ class DefaultClient extends AbstractClient implements ClientInterface
 
             foreach ($items as $item) {
                 try {
-                    $productId = $this->getProductIdByItemId($item->getData('item_id'));
-
-                    if (!$productId) {
-                        $this->logger->warning('Punchout: Product not found for item: ' . $item->getData('item_id'));
-                        continue;
-                    }
-
-                    $quantity = (int)$item->getData('quantity');
-                    if ($quantity < 1) {
-                        $quantity = 1;
-                    }
-
-                    // Add product to cart
-                    $result = $this->cart->addProduct($productId, [
-                        'qty' => $quantity
-                    ]);
+                    $result = $this->addProductToCart($item);
 
                     if ($result) {
                         // Update item status to added
@@ -575,5 +565,83 @@ class DefaultClient extends AbstractClient implements ClientInterface
                 'error' => 'Unexpected error occurred'
             ]);
         }
+    }
+
+    private function addProductToCart(DataObject $item):bool
+    {
+        $productId = $this->getProductIdByItemId($item->getData('item_id'));
+
+        if (!$productId) {
+            $this->logger->warning('Punchout: Product not found for item: ' . $item->getData('item_id'));
+            return false;
+        }
+
+        $totalQty = (int)$item->getData('quantity');
+        if ($totalQty < 1) {
+            $totalQty = 1;
+        }
+
+        $params = [
+            'itemId' => $item->getData('item_id'),
+            'quantityNeeded' => 1,
+            'searchQuantityNeeded' => $totalQty
+        ];
+
+        $locations = $this->lookupInventoryManagement->getResult($params);
+        $locations = $this->renderRegionalProducts->execute($locations, $params);
+
+        $locationsData = [];
+        $lastQty = 0;
+
+        foreach ($locations as $location) {
+            $qtyAvailable = $location['quantityAvailable'] ?? 0;
+            if ($qtyAvailable) {
+                $location['qty'] = $lastQty;
+                if ($lastQty == 0) {
+                    $location['qty'] = min($qtyAvailable, $totalQty);
+                }
+                $lastQty = $totalQty - $qtyAvailable;
+            }
+
+            $locationsData['location_type'] = $location['locationType'] ?? '';
+            $locationsData['location_code'] = $location['locationId'] ?? '';
+            $locationsData[] = $location;
+        }
+
+        // TODO $this->deleteSameSku(); from cart
+
+        foreach ($locationsData as $locationData) {
+            $product = $this->productRepository->get($locationData['itemId']);
+            $this->addProduct($product, $locationData);
+            //$customer = $this->cart->getCustomerSession()->getCustomer();
+
+            // TODO add success/error message
+        }
+
+        $this->cart->getQuote()->setTotalsCollectedFlag(false);
+        $this->cart->getQuote()->collectTotals();
+        $this->cart->save();
+
+        return true;
+    }
+
+    private function addProduct($product, $locationData)
+    {
+        unset($locationData['pricingDetails'],);
+        unset($locationData['address']);
+        unset($locationData['deliveryInfo']);
+
+        $locationData['force'] = true;
+
+        $eventArgs = [
+            'qty' => isset($locationData['qty']) ? ($locationData['qty'] ?: 1) : 1,
+            'request' => $locationData,
+            'super_group' => $locationData['super_group'] ?? null,
+            'bundle_option' => $locationData['bundle_option'] ?? null,
+            'location_code' => $locationData['location_code'] ?? '',
+        ];
+
+        $requestInfo = array_merge($locationData, $eventArgs);
+        $this->cart->addProduct($product, $requestInfo);
     }
 }
