@@ -114,6 +114,14 @@
                 <label translate="true">Temporary PO</label>
             </settings>
         </column>
+        <actionsColumn name="session_items" class="Tirehub\Punchout\Ui\Component\Listing\Column\SessionItems">
+            <settings>
+                <indexField>entity_id</indexField>
+                <label translate="true">Requested Items</label>
+                <draggable>false</draggable>
+                <sortable>false</sortable>
+            </settings>
+        </actionsColumn>
         <actionsColumn name="cxml_request" class="Tirehub\Punchout\Ui\Component\Listing\Column\CxmlRequest">
             <settings>
                 <indexField>entity_id</indexField>
@@ -164,6 +172,37 @@
                     <item name="externalProvider" xsi:type="string">cxml_content.cxml_content_data_source</item>
                     <item name="loading" xsi:type="boolean">false</item>
                     <item name="ajaxUrl" xsi:type="url" path="punchout/session/getcxml"/>
+                </item>
+            </argument>
+        </insertListing>
+    </modal>
+
+    <!-- Modal for displaying session items -->
+    <modal name="session_items_modal">
+        <settings>
+            <options>
+                <option name="title" xsi:type="string" translate="true">Requested Items</option>
+                <option name="buttons" xsi:type="array">
+                    <item name="0" xsi:type="array">
+                        <item name="text" xsi:type="string" translate="true">Close</item>
+                        <item name="class" xsi:type="string">action-primary</item>
+                        <item name="actions" xsi:type="array">
+                            <item name="0" xsi:type="string">closeModal</item>
+                        </item>
+                    </item>
+                </option>
+            </options>
+        </settings>
+        <insertListing name="items_content">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="component" xsi:type="string">Tirehub_Punchout/js/grid/items-content</item>
+                    <item name="autoRender" xsi:type="boolean">false</item>
+                    <item name="dataScope" xsi:type="string">items_content</item>
+                    <item name="namespace" xsi:type="string">items_content</item>
+                    <item name="externalProvider" xsi:type="string">items_content.items_content_data_source</item>
+                    <item name="loading" xsi:type="boolean">false</item>
+                    <item name="ajaxUrl" xsi:type="url" path="punchout/session/getitems"/>
                 </item>
             </argument>
         </insertListing>
