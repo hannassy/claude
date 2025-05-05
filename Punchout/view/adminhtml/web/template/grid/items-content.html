@@ -1,0 +1,20 @@
+<div class="items-content-container">
+    <!-- ko if: loading -->
+    <div class="admin__data-grid-loading-mask">
+        <div class="spinner">
+            <span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
+        </div>
+    </div>
+    <!-- /ko -->
+
+    <!-- ko if: content -->
+    <div class="items-content-wrapper" data-bind="html: content"></div>
+    <!-- /ko -->
+
+    <!-- ko if: !loading() && !content() -->
+    <div class="message message-notice">
+        <div>No items available for this session</div>
+    </div>
+    <!-- /ko -->
+</div>
