@@ -61,7 +61,6 @@ class Start extends Action implements HttpGetActionInterface
             // Fallback to home page if no valid cookie
             $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
             return $resultRedirect->setPath('/customer/account');
-
         } catch (LocalizedException $e) {
             $this->logger->error('Punchout: Error in shopping start: ' . $e->getMessage());
             $this->messageManager->addErrorMessage($e->getMessage());

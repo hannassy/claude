@@ -39,7 +39,6 @@ class Index extends Action implements HttpGetActionInterface
             $this->validateRequest();
 
             return $this->resultFactory->create(ResultFactory::TYPE_PAGE);
-
         } catch (LocalizedException $e) {
             $this->logger->error('Punchout: Error in portal access: ' . $e->getMessage());
             $this->messageManager->addErrorMessage($e->getMessage());

@@ -465,11 +465,6 @@ class DefaultClient extends AbstractClient implements ClientInterface
                 }
             }
 
-            if ($itemsAdded) {
-                // Save cart
-                $this->cart->save();
-            }
-
             return $itemsAdded;
         } catch (\Exception $e) {
             $this->logger->error('Punchout: Error processing items for cart: ' . $e->getMessage());
@@ -567,81 +562,183 @@ class DefaultClient extends AbstractClient implements ClientInterface
         }
     }
 
-    private function addProductToCart(DataObject $item):bool
+    /**
+     * Add requested product to cart with proper location information
+     *
+     * @param DataObject $item Item to add to cart
+     * @return bool Success status
+     */
+    private function addProductToCart(DataObject $item): bool
     {
-        $productId = $this->getProductIdByItemId($item->getData('item_id'));
+        try {
+            // Get product ID from item SKU
+            $sku = $item->getData('item_id');
+            $productId = $this->getProductIdByItemId($sku);
 
-        if (!$productId) {
-            $this->logger->warning('Punchout: Product not found for item: ' . $item->getData('item_id'));
-            return false;
-        }
-
-        $totalQty = (int)$item->getData('quantity');
-        if ($totalQty < 1) {
-            $totalQty = 1;
-        }
-
-        $params = [
-            'itemId' => $item->getData('item_id'),
-            'quantityNeeded' => 1,
-            'searchQuantityNeeded' => $totalQty
-        ];
-
-        $locations = $this->lookupInventoryManagement->getResult($params);
-        $locations = $this->renderRegionalProducts->execute($locations, $params);
-
-        $locationsData = [];
-        $lastQty = 0;
-
-        foreach ($locations as $location) {
-            $qtyAvailable = $location['quantityAvailable'] ?? 0;
-            if ($qtyAvailable) {
-                $location['qty'] = $lastQty;
-                if ($lastQty == 0) {
-                    $location['qty'] = min($qtyAvailable, $totalQty);
-                }
-                $lastQty = $totalQty - $qtyAvailable;
+            if (!$productId) {
+                $this->logger->warning('Punchout: Product not found for item: ' . $sku);
+                return false;
             }
 
-            $locationsData['location_type'] = $location['locationType'] ?? '';
-            $locationsData['location_code'] = $location['locationId'] ?? '';
-            $locationsData[] = $location;
+            // Determine quantity needed
+            $totalQty = max((int)$item->getData('quantity'), 1);
+
+            // Prepare location lookup parameters
+            $params = [
+                'itemId' => $sku,
+                'quantityNeeded' => 1,
+                'searchQuantityNeeded' => $totalQty
+            ];
+
+            // Get available locations with inventory
+            $locations = $this->lookupInventoryManagement->getResult($params);
+            $locations = $this->renderRegionalProducts->execute($locations['results'] ?? [], $params);
+
+            if (empty($locations)) {
+                $this->logger->warning('Punchout: No inventory locations found for item: ' . $sku);
+                return false;
+            }
+
+            // Process inventory from locations
+            $processedLocations = $this->distributeQuantityAcrossLocations($locations, $totalQty);
+
+            // Remove existing items with same SKU from cart before adding new ones
+            $this->removeExistingItemsFromCart($sku);
+
+            // Add products from each location
+            foreach ($processedLocations as $locationData) {
+                if (!isset($locationData['itemId']) || empty($locationData['qty'])) {
+                    continue;
+                }
+
+                $product = $this->productRepository->get($locationData['itemId']);
+                $this->addProductWithLocationData($product, $locationData);
+            }
+
+            // Update cart totals
+            $this->updateCartTotals();
+
+            $this->logger->info('Punchout: Successfully added product to cart: ' . $sku);
+            return true;
+        } catch (\Exception $e) {
+            $this->logger->error('Punchout: Error adding product to cart: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Distribute requested quantity across available inventory locations
+     *
+     * @param array $locations Available inventory locations
+     * @param int $totalQty Total quantity needed
+     * @return array Processed location data with assigned quantities
+     */
+    private function distributeQuantityAcrossLocations(array $locations, int $totalQty): array
+    {
+        $processedLocations = [];
+        $remainingQty = $totalQty;
+
+        foreach ($locations as $location) {
+            $qtyAvailable = (int)($location['quantityAvailable'] ?? 0);
+
+            if ($qtyAvailable <= 0) {
+                continue;
+            }
+
+            $locationData = $location;
+            $locationData['qty'] = min($qtyAvailable, $remainingQty);
+            $locationData['location_type'] = $location['locationType'] ?? '';
+            $locationData['location_code'] = $location['locationId'] ?? '';
+
+            $processedLocations[] = $locationData;
+
+            $remainingQty -= $locationData['qty'];
+
+            if ($remainingQty <= 0) {
+                break;
+            }
         }
 
-        // TODO $this->deleteSameSku(); from cart
+        return $processedLocations;
+    }
 
-        foreach ($locationsData as $locationData) {
-            $product = $this->productRepository->get($locationData['itemId']);
-            $this->addProduct($product, $locationData);
-            //$customer = $this->cart->getCustomerSession()->getCustomer();
+    /**
+     * Add product to cart with location data
+     *
+     * @param \Magento\Catalog\Api\Data\ProductInterface $product Product to add
+     * @param array $locationData Location data with inventory
+     * @return void
+     */
+    private function addProductWithLocationData($product, array $locationData): void
+    {
+        // Clean up unnecessary location data
+        $requestData = $this->prepareLocationRequestData($locationData);
 
-            // TODO add success/error message
-        }
+        // Add product to cart
+        $this->cart->addProduct($product, $requestData);
+    }
 
+    /**
+     * Prepare location request data for cart
+     *
+     * @param array $locationData Raw location data
+     * @return array Cleaned location request data
+     */
+    private function prepareLocationRequestData(array $locationData): array
+    {
+        // Remove unnecessary data
+        $cleanData = $locationData;
+        unset($cleanData['pricingDetails']);
+        unset($cleanData['address']);
+        unset($cleanData['deliveryInfo']);
+
+        // Set required flags
+        $cleanData['force'] = true;
+
+        // Set additional request parameters
+        $requestParams = [
+            'qty' => isset($cleanData['qty']) ? ($cleanData['qty'] ?: 1) : 1,
+            'request' => $cleanData,
+            'super_group' => $cleanData['super_group'] ?? null,
+            'bundle_option' => $cleanData['bundle_option'] ?? null,
+            'location_code' => $cleanData['location_code'] ?? '',
+        ];
+
+        return array_merge($cleanData, $requestParams);
+    }
+
+    private function updateCartTotals(): void
+    {
         $this->cart->getQuote()->setTotalsCollectedFlag(false);
         $this->cart->getQuote()->collectTotals();
         $this->cart->save();
-
-        return true;
     }
 
-    private function addProduct($product, $locationData)
+    private function removeExistingItemsFromCart(string $sku): void
     {
-        unset($locationData['pricingDetails'],);
-        unset($locationData['address']);
-        unset($locationData['deliveryInfo']);
+        try {
+            $quote = $this->cart->getQuote();
+            $itemsToRemove = [];
 
-        $locationData['force'] = true;
+            // Identify items with matching SKU
+            foreach ($quote->getAllItems() as $item) {
+                if ($item->getSku() === $sku) {
+                    $itemsToRemove[] = $item->getItemId();
+                }
+            }
 
-        $eventArgs = [
-            'qty' => isset($locationData['qty']) ? ($locationData['qty'] ?: 1) : 1,
-            'request' => $locationData,
-            'super_group' => $locationData['super_group'] ?? null,
-            'bundle_option' => $locationData['bundle_option'] ?? null,
-            'location_code' => $locationData['location_code'] ?? '',
-        ];
+            // Remove identified items
+            foreach ($itemsToRemove as $itemId) {
+                $this->cart->removeItem($itemId);
+            }
 
-        $requestInfo = array_merge($locationData, $eventArgs);
-        $this->cart->addProduct($product, $requestInfo);
+            if (!empty($itemsToRemove)) {
+                $this->logger->info('Punchout: Removed ' . count($itemsToRemove) . ' existing items with SKU: ' . $sku);
+                // Save cart after removing items
+                $this->cart->save();
+            }
+        } catch (\Exception $e) {
+            $this->logger->error('Punchout: Error removing existing items from cart: ' . $e->getMessage());
+        }
     }
 }
