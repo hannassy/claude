@@ -13,6 +13,8 @@ use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\DataObject;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Logger\Monolog;
+use Magento\Framework\Stdlib\Cookie\CookieMetadataFactory;
+use Magento\Framework\Stdlib\CookieManagerInterface;
 use Tirehub\Catalog\Api\RenderRegionalProductsInterface;
 use Tirehub\Checkout\Service\Management\LookupInventoryManagement;
 use Tirehub\Punchout\Api\Data\SessionInterface;
@@ -37,7 +39,9 @@ class ShoppingStart
         private readonly ProductRepositoryInterface $productRepository,
         private readonly LookupInventoryManagement $lookupInventoryManagement,
         private readonly RenderRegionalProductsInterface $renderRegionalProducts,
-        private readonly Monolog $logger
+        private readonly Monolog $logger,
+        private readonly CookieManagerInterface $cookieManager,
+        private readonly CookieMetadataFactory $cookieMetadataFactory
     ) {
     }
 
@@ -87,8 +91,25 @@ class ShoppingStart
 
                 // Redirect to cart page if items were added, otherwise to home page
                 $result = $this->redirectFactory->create();
-                $result->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0', true);
+                $result->setHeader(
+                    'Cache-Control',
+                    'no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0',
+                    true
+                );
                 $result->setHeader('Pragma', 'no-cache', true);
+                $result->setHeader('X-Magento-Cache-Debug', 'MISS', true);
+
+                $cookieMetadata = $this->cookieMetadataFactory->createPublicCookieMetadata()
+                    ->setDuration(86400)
+                    ->setPath('/')
+                    ->setHttpOnly(false);
+
+                // Set the cookie with the correct parameter order
+                $this->cookieManager->setPublicCookie(
+                    'mage-cache-sessid',
+                    $this->customerSession->getSessionId(),
+                    $cookieMetadata
+                );
 
                 if ($itemsAdded) {
                     return $result->setPath('checkout/cart');
