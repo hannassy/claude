@@ -11,4 +11,10 @@
     <action name="customer/account/index">
         <section name="punchout"/>
     </action>
+    <action name="punchout/shopping/start">
+        <section name="*"/>
+    </action>
+    <action name="punchout/portal/index">
+        <section name="*"/>
+    </action>
 </config>

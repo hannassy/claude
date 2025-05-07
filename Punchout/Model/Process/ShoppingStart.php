@@ -73,6 +73,12 @@ class ShoppingStart
 
             // If we have a customer ID, log them in
             if ($customerId) {
+                // Make sure we're starting with a clean session
+                if ($this->customerSession->isLoggedIn()) {
+                    $this->customerSession->logout();
+                    $this->customerSession->regenerateId();
+                }
+
                 $session->setData(SessionInterface::STATUS, SessionInterface::STATUS_ACTIVE);
                 $this->sessionResource->save($session);
 
@@ -91,11 +97,7 @@ class ShoppingStart
 
                 // Redirect to cart page if items were added, otherwise to home page
                 $result = $this->redirectFactory->create();
-                $result->setHeader(
-                    'Cache-Control',
-                    'no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0',
-                    true
-                );
+                $result->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0', true);
                 $result->setHeader('Pragma', 'no-cache', true);
                 $result->setHeader('X-Magento-Cache-Debug', 'MISS', true);
 

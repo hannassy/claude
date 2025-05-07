@@ -39,14 +39,16 @@ class Start extends Action implements HttpGetActionInterface
         $this->disablePunchoutMode->execute();
 
         try {
+            // Force customer logout before validating
+            if ($this->customerSession->isLoggedIn()) {
+                $this->customerSession->logout();
+                $this->customerSession->regenerateId();
+                // Clear customer data from session
+                $this->customerSession->clearStorage();
+            }
+
             // Get and validate the token/cookie
             $buyerCookie = $this->validateAndGetBuyerCookie();
-
-            // If validation passed, proceed with original flow
-            $customerId = $this->customerSession->getId();
-            if ($customerId) {
-                $this->customerSession->logout()->setLastCustomerId($customerId);
-            }
 
             if ($buyerCookie) {
                 $session = $this->sessionFactory->create();
@@ -72,12 +74,10 @@ class Start extends Action implements HttpGetActionInterface
 
     /**
      * Validate the request and get the buyer cookie
-     *
-     * @return string|null
-     * @throws LocalizedException
      */
     private function validateAndGetBuyerCookie(): ?string
     {
+        // Code for validating token remains the same...
         // Check for the encrypted token first
         $token = $this->request->getParam(self::TOKEN_PARAM);
         if (!empty($token)) {
@@ -102,11 +102,9 @@ class Start extends Action implements HttpGetActionInterface
                 ]);
 
                 // Store the buyer cookie as request parameter for downstream processing
-                // This is needed because other code expects it as a request parameter
                 $this->request->setParam('cookie', $buyerCookie);
 
                 return $buyerCookie;
-
             } catch (\Exception $e) {
                 $this->logger->error('Punchout: Token validation error: ' . $e->getMessage());
                 throw new LocalizedException(__('Invalid or expired token'));
