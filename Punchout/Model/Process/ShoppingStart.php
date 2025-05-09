@@ -39,7 +39,7 @@ class ShoppingStart
     ) {
     }
 
-    public function execute(RequestInterface $request): ResultInterface
+    public function execute(RequestInterface $request): bool
     {
         try {
             $buyerCookie = $request->getParam('cookie');
@@ -79,29 +79,16 @@ class ShoppingStart
                 $this->logger->info('Punchout: Customer logged in: ' . $customerId);
 
                 // Add requested items to cart if any
-                $itemsAdded = $this->addItemsToCart($buyerCookie);
-
-                // Redirect to cart page if items were added, otherwise to home page
-                $result = $this->redirectFactory->create();
-
-                if ($itemsAdded) {
-                    return $result->setPath('checkout/cart');
-                } else {
-                    return $result->setPath('customer/account');
-                }
-            } else {
-                // No customer ID, redirect to login
-                $result = $this->redirectFactory->create();
-                return $result->setPath('customer/account');
+                return $this->addItemsToCart($buyerCookie);
             }
+
+            return false;
         } catch (LocalizedException $e) {
             $this->logger->error('Punchout: Error during shopping start: ' . $e->getMessage());
-            $result = $this->redirectFactory->create();
-            return $result->setPath('customer/account');
+            throw $e;
         } catch (\Exception $e) {
             $this->logger->error('Punchout: Unexpected error during shopping start: ' . $e->getMessage());
-            $result = $this->redirectFactory->create();
-            return $result->setPath('customer/account');
+            throw $e;
         }
     }
 

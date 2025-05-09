@@ -29,4 +29,17 @@ class Punchout implements ArgumentInterface
 
         return null;
     }
+
+    public function getPunchoutRedirectUrl(): string
+    {
+        // You can determine the redirect URL based on various conditions
+        // For example, redirect to cart if items were added
+        $hasItems = $this->customerSession->getData('punchout_has_items') ?? false;
+
+        if ($hasItems) {
+            return 'checkout/cart';
+        }
+
+        return 'customer/account';
+    }
 }

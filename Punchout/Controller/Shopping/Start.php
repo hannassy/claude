@@ -16,6 +16,7 @@ use Tirehub\Punchout\Api\DisablePunchoutModeInterface;
 use Tirehub\Punchout\Model\SessionFactory;
 use Tirehub\Punchout\Api\Data\SessionInterface;
 use Tirehub\Punchout\Model\Process\ShoppingStart as ShoppingStartProcess;
+use Exception;
 
 class Start extends Action implements HttpGetActionInterface
 {
@@ -55,14 +56,27 @@ class Start extends Action implements HttpGetActionInterface
                 $session->load($buyerCookie, 'buyer_cookie');
 
                 if ($session->getId()) {
-                    return $this->shoppingStartProcess->execute($this->request);
+                    // Process the punchout session, but don't redirect yet
+                    $hasItems = $this->shoppingStartProcess->execute($this->request);
+
+                    // Store if items were added to the cart
+                    $this->customerSession->setData('punchout_has_items', $hasItems);
+
+                    // Render the intermediary page that will invalidate sections and redirect
+                    $resultPage = $this->resultFactory->create(ResultFactory::TYPE_PAGE);
+                    $resultPage->getConfig()->getTitle()->set(__('Starting Punchout Session'));
+
+                    // Apply the specific layout handle for our redirect page
+                    $resultPage->addHandle('punchout_shopping_start');
+
+                    return $resultPage;
                 }
             }
 
             // Fallback to home page if no valid cookie
             $resultRedirect = $this->resultFactory->create(ResultFactory::TYPE_REDIRECT);
             return $resultRedirect->setPath('/customer/account');
-        } catch (LocalizedException $e) {
+        } catch (LocalizedException|Exception $e) {
             $this->logger->error('Punchout: Error in shopping start: ' . $e->getMessage());
             $this->messageManager->addErrorMessage($e->getMessage());
 

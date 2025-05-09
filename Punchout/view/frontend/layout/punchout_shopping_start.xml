@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        layout="1column"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <head>
+        <remove src="css/styles-m.css"/>
+        <remove src="css/styles-l.css"/>
+        <remove src="mage/calendar.css"/>
+    </head>
+    <body>
+        <referenceBlock name="page.main.title" remove="true"/>
+        <referenceBlock name="absolute_footer" remove="true"/>
+        <referenceBlock name="silk_theme_custom_mesaage_banner" remove="true"/>
+        <referenceContainer name="header.container" remove="true"/>
+        <referenceContainer name="footer-container" remove="true"/>
+        <referenceContainer name="page.top" remove="true"/>
+        <referenceContainer name="page.bottom.container" remove="true"/>
+        <referenceContainer name="before.body.end" remove="true"/>
+
+        <referenceContainer name="content">
+            <block class="Magento\Framework\View\Element\Template"
+                    name="punchout.invalidateandredirect"
+                    template="Tirehub_Punchout::invalidate-and-redirect.phtml">
+                <arguments>
+                    <argument name="punchout_view_model" xsi:type="object">Tirehub\Punchout\ViewModel\Punchout</argument>
+                </arguments>
+            </block>
+        </referenceContainer>
+    </body>
+</page>

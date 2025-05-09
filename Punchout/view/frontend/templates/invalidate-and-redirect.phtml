@@ -1,0 +1,23 @@
+<?php
+/** @var \Magento\Framework\View\Element\Template $block */
+/** @var \Magento\Framework\Escaper $escaper */
+/** @var \Tirehub\Punchout\ViewModel\Punchout $punchoutViewModel */
+$punchoutViewModel = $block->getData('punchout_view_model');
+$redirectUrl = $punchoutViewModel && $punchoutViewModel->getPunchoutRedirectUrl()
+    ? $punchoutViewModel->getPunchoutRedirectUrl()
+    : 'customer/account';
+?>
+<div class="punchout-redirect-message">
+    <h1><?= $escaper->escapeHtml(__('Starting Punchout Session')) ?></h1>
+    <p><?= $escaper->escapeHtml(__('Please wait while we prepare your session...')) ?></p>
+</div>
+
+<script type="text/x-magento-init">
+    {
+        "*": {
+            "Tirehub_Punchout/js/action/invalidate-and-redirect": {
+                "redirectUrl": "<?= $escaper->escapeJs($redirectUrl) ?>"
+            }
+        }
+    }
+</script>
