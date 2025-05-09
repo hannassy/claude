@@ -5,7 +5,6 @@ namespace Tirehub\Punchout\Model\Process;
 
 use Magento\Catalog\Api\ProductRepositoryInterface;
 use Magento\Checkout\Model\Cart;
-use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Customer\Model\Session as CustomerSession;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Controller\Result\RedirectFactory;
@@ -13,8 +12,6 @@ use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\DataObject;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Logger\Monolog;
-use Magento\Framework\Stdlib\Cookie\CookieMetadataFactory;
-use Magento\Framework\Stdlib\CookieManagerInterface;
 use Tirehub\Catalog\Api\RenderRegionalProductsInterface;
 use Tirehub\Checkout\Service\Management\LookupInventoryManagement;
 use Tirehub\Punchout\Api\Data\SessionInterface;
@@ -30,7 +27,6 @@ class ShoppingStart
         private readonly RedirectFactory $redirectFactory,
         private readonly SessionFactory $sessionFactory,
         private readonly SessionResource $sessionResource,
-        private readonly CustomerRepositoryInterface $customerRepository,
         private readonly CustomerSession $customerSession,
         private readonly EnablePunchoutModeInterface $enablePunchoutMode,
         private readonly ItemCollectionFactory $itemCollectionFactory,
@@ -39,18 +35,10 @@ class ShoppingStart
         private readonly ProductRepositoryInterface $productRepository,
         private readonly LookupInventoryManagement $lookupInventoryManagement,
         private readonly RenderRegionalProductsInterface $renderRegionalProducts,
-        private readonly Monolog $logger,
-        private readonly CookieManagerInterface $cookieManager,
-        private readonly CookieMetadataFactory $cookieMetadataFactory
+        private readonly Monolog $logger
     ) {
     }
 
-    /**
-     * Process shopping start request for punchout
-     *
-     * @param RequestInterface $request
-     * @return ResultInterface
-     */
     public function execute(RequestInterface $request): ResultInterface
     {
         try {
@@ -83,9 +71,7 @@ class ShoppingStart
                 $this->sessionResource->save($session);
 
                 // Log in the customer
-                $customer = $this->customerRepository->getById($customerId);
-                $this->customerSession->setCustomerDataAsLoggedIn($customer);
-                $this->customerSession->regenerateId();
+                $this->customerSession->loginById($customerId);
 
                 // Enable punchout mode
                 $this->enablePunchoutMode->execute($buyerCookie);
@@ -97,21 +83,6 @@ class ShoppingStart
 
                 // Redirect to cart page if items were added, otherwise to home page
                 $result = $this->redirectFactory->create();
-                $result->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0', true);
-                $result->setHeader('Pragma', 'no-cache', true);
-                $result->setHeader('X-Magento-Cache-Debug', 'MISS', true);
-
-                $cookieMetadata = $this->cookieMetadataFactory->createPublicCookieMetadata()
-                    ->setDuration(86400)
-                    ->setPath('/')
-                    ->setHttpOnly(false);
-
-                // Set the cookie with the correct parameter order
-                $this->cookieManager->setPublicCookie(
-                    'mage-cache-sessid',
-                    $this->customerSession->getSessionId(),
-                    $cookieMetadata
-                );
 
                 if ($itemsAdded) {
                     return $result->setPath('checkout/cart');

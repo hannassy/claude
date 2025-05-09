@@ -12,5 +12,15 @@
                 <argument name="punchout_view_model" xsi:type="object">Tirehub\Punchout\ViewModel\Punchout</argument>
             </arguments>
         </referenceBlock>
+        <referenceContainer name="before.body.end">
+            <block class="Magento\Framework\View\Element\Template"
+                    name="punchout.section.refresh"
+                    template="Tirehub_Punchout::section-refresh.phtml"
+                    after="-">
+                <arguments>
+                    <argument name="punchout_view_model" xsi:type="object">Tirehub\Punchout\ViewModel\Punchout</argument>
+                </arguments>
+            </block>
+        </referenceContainer>
     </body>
 </page>

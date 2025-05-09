@@ -1,0 +1,19 @@
+<?php
+/** @var \Magento\Framework\View\Element\Template $block */
+/** @var \Magento\Framework\Escaper $escaper */
+/** @var \Tirehub\Punchout\ViewModel\Punchout $punchoutViewModel */
+$punchoutViewModel = $block->getData('punchout_view_model') ?: $block->getLayout()->createBlock('Tirehub\Punchout\ViewModel\Punchout');
+$isPunchoutMode = $punchoutViewModel->isPunchoutMode();
+$punchoutSessionId = $punchoutViewModel->getPunchoutSessionId() ?: '';
+?>
+
+<script type="text/x-magento-init">
+    {
+        "*": {
+            "Tirehub_Punchout/js/section-refresh": {
+                "isPunchoutMode": <?= $isPunchoutMode ? 'true' : 'false' ?>,
+                "punchoutSessionId": "<?= $escaper->escapeJs($punchoutSessionId) ?>"
+            }
+        }
+    }
+</script>
