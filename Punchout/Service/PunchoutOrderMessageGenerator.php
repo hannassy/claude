@@ -171,13 +171,18 @@ class PunchoutOrderMessageGenerator
             }
 
             $itemIn = $punchOutOrderMessage->addChild('ItemIn');
-            $itemIn->addAttribute('quantity', (string)(int)$item->getQty());
+            $itemIn->addAttribute('quantity', (string)(int)$item->getQtyOrdered());
             $itemIn->addAttribute('lineNumber', (string)$lineNumber);
 
             // Add item ID
             $itemId = $itemIn->addChild('ItemID');
             $itemId->addChild('SupplierPartID', $item->getSku());
-            //$itemId->addChild('SupplierPartAuxiliaryID', $punchoutSession->getData('temppo'));
+
+            // Add temppo if available
+            $temppo = $punchoutSession->getData('temppo');
+            if ($temppo) {
+                $itemId->addChild('SupplierPartAuxiliaryID', $temppo);
+            }
 
             // Add item detail
             $itemDetail = $itemIn->addChild('ItemDetail');
