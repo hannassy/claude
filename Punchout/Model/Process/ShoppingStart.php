@@ -7,8 +7,6 @@ use Magento\Catalog\Api\ProductRepositoryInterface;
 use Magento\Checkout\Model\Cart;
 use Magento\Customer\Model\Session as CustomerSession;
 use Magento\Framework\App\RequestInterface;
-use Magento\Framework\Controller\Result\RedirectFactory;
-use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\DataObject;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Logger\Monolog;
@@ -24,7 +22,6 @@ use Tirehub\Punchout\Model\ResourceModel\Session as SessionResource;
 class ShoppingStart
 {
     public function __construct(
-        private readonly RedirectFactory $redirectFactory,
         private readonly SessionFactory $sessionFactory,
         private readonly SessionResource $sessionResource,
         private readonly CustomerSession $customerSession,
@@ -78,6 +75,8 @@ class ShoppingStart
 
                 $this->logger->info('Punchout: Customer logged in: ' . $customerId);
 
+                $this->clearCustomerCart();
+
                 // Add requested items to cart if any
                 return $this->addItemsToCart($buyerCookie);
             }
@@ -89,6 +88,15 @@ class ShoppingStart
         } catch (\Exception $e) {
             $this->logger->error('Punchout: Unexpected error during shopping start: ' . $e->getMessage());
             throw $e;
+        }
+    }
+
+    private function clearCustomerCart(): void
+    {
+        try {
+            $this->cart->truncate()->save();
+        } catch (\Exception $e) {
+            $this->logger->error('Punchout: Error during shopping start: ' . $e->getMessage());
         }
     }
 
@@ -275,6 +283,7 @@ class ShoppingStart
      * @param \Magento\Catalog\Api\Data\ProductInterface $product Product to add
      * @param array $locationData Location data with inventory
      * @return void
+     * @throws LocalizedException
      */
     private function addProductWithLocationData($product, array $locationData): void
     {

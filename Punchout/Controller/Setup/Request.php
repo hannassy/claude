@@ -12,6 +12,7 @@ use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Logger\Monolog;
 use Tirehub\Punchout\Model\Process\Request as RequestProcess;
 use Tirehub\Punchout\Model\CxmlProcessor;
+use Magento\Customer\Model\Session as CustomerSession;
 use Throwable;
 
 class Request implements HttpPostActionInterface, CsrfAwareActionInterface
@@ -21,7 +22,8 @@ class Request implements HttpPostActionInterface, CsrfAwareActionInterface
         private readonly RawFactory $rawFactory,
         private readonly RequestProcess $requestProcess,
         private readonly CxmlProcessor $cxmlProcessor,
-        private readonly Monolog $logger
+        private readonly Monolog $logger,
+        private readonly CustomerSession $customerSession
     ) {
     }
 
@@ -34,6 +36,14 @@ class Request implements HttpPostActionInterface, CsrfAwareActionInterface
     {
         try {
             $this->logger->info('Punchout: Processing setup request');
+
+            // Force customer logout before validating
+            if ($this->customerSession->isLoggedIn()) {
+                $this->customerSession->logout();
+                $this->customerSession->regenerateId();
+                // Clear customer data from session
+                $this->customerSession->clearStorage();
+            }
 
             // Log raw content for debugging
             $content = $this->request->getContent();

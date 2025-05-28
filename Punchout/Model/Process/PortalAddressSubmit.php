@@ -12,6 +12,7 @@ use Tirehub\Punchout\Api\CreateCustomerInterface;
 use Tirehub\Punchout\Api\Data\SessionInterface;
 use Tirehub\Punchout\Model\SessionFactory;
 use Tirehub\Punchout\Model\ResourceModel\Session as SessionResource;
+use Tirehub\Punchout\Service\TokenGenerator;
 
 class PortalAddressSubmit
 {
@@ -20,17 +21,12 @@ class PortalAddressSubmit
         private readonly SessionFactory $sessionFactory,
         private readonly SessionResource $sessionResource,
         private readonly CreateCustomerInterface $createCustomer,
+        private readonly TokenGenerator $tokenGenerator,
         private readonly Monolog $logger
     ) {
     }
 
-    /**
-     * Process portal address submission
-     *
-     * @param RequestInterface $request
-     * @return \Magento\Framework\Controller\Result\Redirect
-     */
-    public function execute(RequestInterface $request): \Magento\Framework\Controller\Result\Redirect
+    public function execute(RequestInterface $request): Redirect
     {
         $buyerCookie = $request->getParam('cookie');
         $addressId = $request->getParam('locationId');
@@ -44,7 +40,6 @@ class PortalAddressSubmit
                 throw new LocalizedException(__('Missing address_id parameter'));
             }
 
-            // Load session
             $session = $this->sessionFactory->create();
             $session->load($buyerCookie, SessionInterface::BUYER_COOKIE);
 
@@ -52,7 +47,6 @@ class PortalAddressSubmit
                 throw new LocalizedException(__('Invalid buyer cookie'));
             }
 
-            // Get extrinsics from session
             $extrinsics = [];
             if ($session->getData(SessionInterface::FULL_NAME)) {
                 $extrinsics['UserFullName'] = $session->getData(SessionInterface::FULL_NAME);
@@ -67,34 +61,30 @@ class PortalAddressSubmit
                 $extrinsics['PhoneNumber'] = $session->getData(SessionInterface::PHONE);
             }
 
-            // Create customer using the selected address ID
             $customerId = $this->createCustomer->execute($extrinsics, $addressId);
 
-            // Update session with customer ID
             $session->setData(SessionInterface::CUSTOMER_ID, $customerId);
             $session->setData(SessionInterface::ADDRESS_ID, $addressId);
             $this->sessionResource->save($session);
 
-            // Redirect to shopping start
+            $shoppingUrl = $this->tokenGenerator->generateShoppingStartUrl($buyerCookie);
+
             $result = $this->redirectFactory->create();
-            return $result->setPath('punchout/shopping/start', ['cookie' => $buyerCookie]);
+            return $result->setUrl($shoppingUrl);
         } catch (LocalizedException $e) {
             $this->logger->error('Punchout: Error processing portal address submit: ' . $e->getMessage());
 
-            // Redirect back to portal with error
+            $portalUrl = $this->tokenGenerator->generatePortalUrl($buyerCookie);
+
             $result = $this->redirectFactory->create();
-            return $result->setPath('punchout/portal', [
-                'cookie' => $buyerCookie
-            ]);
+            return $result->setUrl($portalUrl);
         } catch (\Exception $e) {
             $this->logger->error('Punchout: Unexpected error in portal address submit: ' . $e->getMessage());
 
-            // Redirect back to portal with error
+            $portalUrl = $this->tokenGenerator->generatePortalUrl($buyerCookie);
+
             $result = $this->redirectFactory->create();
-            return $result->setPath('punchout/portal', [
-                'cookie' => $buyerCookie,
-                'error' => 'Unexpected error occurred'
-            ]);
+            return $result->setUrl($portalUrl);
         }
     }
 }

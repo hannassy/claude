@@ -7,11 +7,6 @@ $redirectUrl = $punchoutViewModel && $punchoutViewModel->getPunchoutRedirectUrl(
     ? $punchoutViewModel->getPunchoutRedirectUrl()
     : 'customer/account';
 ?>
-<div class="punchout-redirect-message">
-    <h1><?= $escaper->escapeHtml(__('Starting Punchout Session')) ?></h1>
-    <p><?= $escaper->escapeHtml(__('Please wait while we prepare your session...')) ?></p>
-</div>
-
 <script type="text/x-magento-init">
     {
         "*": {

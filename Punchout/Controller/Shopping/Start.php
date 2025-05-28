@@ -16,6 +16,7 @@ use Tirehub\Punchout\Api\DisablePunchoutModeInterface;
 use Tirehub\Punchout\Model\SessionFactory;
 use Tirehub\Punchout\Api\Data\SessionInterface;
 use Tirehub\Punchout\Model\Process\ShoppingStart as ShoppingStartProcess;
+use Magento\Framework\View\Result\PageFactory;
 use Exception;
 
 class Start extends Action implements HttpGetActionInterface
@@ -30,7 +31,8 @@ class Start extends Action implements HttpGetActionInterface
         private readonly CustomerSession $customerSession,
         private readonly DisablePunchoutModeInterface $disablePunchoutMode,
         private readonly EncryptorInterface $encryptor,
-        private readonly Monolog $logger
+        private readonly Monolog $logger,
+        private readonly PageFactory $pageFactory
     ) {
         parent::__construct($context);
     }
@@ -38,6 +40,8 @@ class Start extends Action implements HttpGetActionInterface
     public function execute()
     {
         $this->disablePunchoutMode->execute();
+
+        // TODO clear cart
 
         try {
             // Force customer logout before validating
@@ -62,14 +66,7 @@ class Start extends Action implements HttpGetActionInterface
                     // Store if items were added to the cart
                     $this->customerSession->setData('punchout_has_items', $hasItems);
 
-                    // Render the intermediary page that will invalidate sections and redirect
-                    $resultPage = $this->resultFactory->create(ResultFactory::TYPE_PAGE);
-                    $resultPage->getConfig()->getTitle()->set(__('Starting Punchout Session'));
-
-                    // Apply the specific layout handle for our redirect page
-                    $resultPage->addHandle('punchout_shopping_start');
-
-                    return $resultPage;
+                    return $this->pageFactory->create();
                 }
             }
 
