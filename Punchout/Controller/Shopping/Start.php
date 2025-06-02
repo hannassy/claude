@@ -18,6 +18,7 @@ use Tirehub\Punchout\Api\Data\SessionInterface;
 use Tirehub\Punchout\Model\Process\ShoppingStart as ShoppingStartProcess;
 use Magento\Framework\View\Result\PageFactory;
 use Exception;
+use Tirehub\Punchout\Service\ContextCleaner;
 
 class Start extends Action implements HttpGetActionInterface
 {
@@ -32,25 +33,17 @@ class Start extends Action implements HttpGetActionInterface
         private readonly DisablePunchoutModeInterface $disablePunchoutMode,
         private readonly EncryptorInterface $encryptor,
         private readonly Monolog $logger,
-        private readonly PageFactory $pageFactory
+        private readonly PageFactory $pageFactory,
+        private readonly ContextCleaner $contextCleaner
     ) {
         parent::__construct($context);
     }
 
     public function execute()
     {
-        $this->disablePunchoutMode->execute();
-
-        // TODO clear cart
-
         try {
-            // Force customer logout before validating
-            if ($this->customerSession->isLoggedIn()) {
-                $this->customerSession->logout();
-                $this->customerSession->regenerateId();
-                // Clear customer data from session
-                $this->customerSession->clearStorage();
-            }
+            $this->disablePunchoutMode->execute();
+            $this->contextCleaner->execute();
 
             // Get and validate the token/cookie
             $buyerCookie = $this->validateAndGetBuyerCookie();

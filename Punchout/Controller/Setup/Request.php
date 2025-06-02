@@ -12,8 +12,9 @@ use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Logger\Monolog;
 use Tirehub\Punchout\Model\Process\Request as RequestProcess;
 use Tirehub\Punchout\Model\CxmlProcessor;
-use Magento\Customer\Model\Session as CustomerSession;
 use Throwable;
+use Tirehub\Punchout\Api\DisablePunchoutModeInterface;
+use Tirehub\Punchout\Service\ContextCleaner;
 
 class Request implements HttpPostActionInterface, CsrfAwareActionInterface
 {
@@ -23,7 +24,8 @@ class Request implements HttpPostActionInterface, CsrfAwareActionInterface
         private readonly RequestProcess $requestProcess,
         private readonly CxmlProcessor $cxmlProcessor,
         private readonly Monolog $logger,
-        private readonly CustomerSession $customerSession
+        private readonly DisablePunchoutModeInterface $disablePunchoutMode,
+        private readonly ContextCleaner $contextCleaner
     ) {
     }
 
@@ -37,13 +39,8 @@ class Request implements HttpPostActionInterface, CsrfAwareActionInterface
         try {
             $this->logger->info('Punchout: Processing setup request');
 
-            // Force customer logout before validating
-            if ($this->customerSession->isLoggedIn()) {
-                $this->customerSession->logout();
-                $this->customerSession->regenerateId();
-                // Clear customer data from session
-                $this->customerSession->clearStorage();
-            }
+            $this->disablePunchoutMode->execute();
+            $this->contextCleaner->execute();
 
             // Log raw content for debugging
             $content = $this->request->getContent();
@@ -76,22 +73,35 @@ class Request implements HttpPostActionInterface, CsrfAwareActionInterface
             $result = $this->rawFactory->create();
             $result->setHeader('Content-Type', 'text/xml');
 
-            if ($e->getMessage() === 'invalid_identity' || strpos($e->getMessage(), 'find identity') !== false) {
+            if ($e->getMessage() === 'invalid_identity'
+                || str_contains($e->getMessage(), 'find identity')
+                || str_contains($e->getMessage(), 'Partner not found')
+            ) {
                 $responseXml = $this->cxmlProcessor->generateInvalidIdentityResponse();
                 $result->setHttpResponseCode(400);
-            } elseif ($e->getMessage() === 'invalid_shared_secret' || strpos($e->getMessage(), 'shared secret') !== false) {
+            } elseif ($e->getMessage() === 'invalid_shared_secret'
+                || str_contains($e->getMessage(), 'shared secret')
+            ) {
                 $responseXml = $this->cxmlProcessor->generateInvalidSharedSecretResponse();
                 $result->setHttpResponseCode(401);
-            } elseif (strpos($e->getMessage(), 'dealer code') !== false || strpos($e->getMessage(), 'address id') !== false) {
-                // Extract dealer code if available
+            } elseif (str_contains($e->getMessage(), 'dealer code')
+                || str_contains($e->getMessage(), 'address id')
+                || str_contains($e->getMessage(), 'Dealer not found')
+                || str_contains($e->getMessage(), 'Invalid dealer code')
+            ) {
                 $dealerCode = '';
                 if (preg_match('/dealer code: ([^\s]+)/i', $e->getMessage(), $matches)) {
+                    $dealerCode = $matches[1];
+                } elseif (preg_match('/address id ([^\s]+)/i', $e->getMessage(), $matches)) {
+                    $dealerCode = $matches[1];
+                } elseif (preg_match('/addressId=\'([^\']+)\'/i', $e->getMessage(), $matches)) {
                     $dealerCode = $matches[1];
                 }
                 $responseXml = $this->cxmlProcessor->generateInvalidDealerCodeResponse($dealerCode);
                 $result->setHttpResponseCode(400);
-            } elseif (strpos($e->getMessage(), 'not authorized') !== false) {
-                // Extract dealer code if available
+            } elseif (str_contains($e->getMessage(), 'not authorized')
+                || str_contains($e->getMessage(), 'not currently authorized')
+            ) {
                 $dealerCode = '';
                 if (preg_match('/location ([^\s]+)/i', $e->getMessage(), $matches)) {
                     $dealerCode = $matches[1];
@@ -99,7 +109,6 @@ class Request implements HttpPostActionInterface, CsrfAwareActionInterface
                 $responseXml = $this->cxmlProcessor->generateUnauthorizedDealerResponse($dealerCode);
                 $result->setHttpResponseCode(401);
             } else {
-                // Generic error for other cases
                 $responseXml = $this->cxmlProcessor->generateInvalidXmlResponse();
                 $result->setHttpResponseCode(500);
             }

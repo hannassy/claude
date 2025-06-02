@@ -29,19 +29,16 @@ class Credentials
             }
         }
 
-        // Check if partner exists
         if (!$partner) {
-            throw new LocalizedException(__('invalid_identity'));
+            throw new LocalizedException(__('Unable to find identity match!'));
         }
 
-        // Check identity
         if ($partner['identity'] !== $identity) {
-            throw new LocalizedException(__('invalid_identity'));
+            throw new LocalizedException(__('Unable to find identity match!'));
         }
 
-        // Check shared secret
         if ($partner['sharedSecret'] !== $sharedSecret) {
-            throw new LocalizedException(__('invalid_shared_secret'));
+            throw new LocalizedException(__('Invalid shared secret!'));
         }
     }
 }

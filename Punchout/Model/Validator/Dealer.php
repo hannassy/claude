@@ -32,7 +32,7 @@ class Dealer
         }
 
         if (!$partner) {
-            throw new LocalizedException(__('Partner not found'));
+            throw new LocalizedException(__('Unable to find identity match!'));
         }
 
         $dealerPrefix = $partner['dealerPrefix'] ?? '';
@@ -42,7 +42,9 @@ class Dealer
         $resultDealerCode = $result['results'][0]['shipToLocation']['locationId'] ?? null;
 
         if (!$resultDealerCode) {
-            throw new LocalizedException(__('Dealer not found'));
+            throw new LocalizedException(
+                __('Unable to match requested address id %1 to TireHub Ship To! Please contact your administrator', $dealerCode)
+            );
         }
     }
 }

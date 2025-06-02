@@ -29,36 +29,35 @@ class ExtractAddressId
     public function execute(string $addressId, string $senderIdentity): ?string
     {
         try {
-            // Get partner configuration
             $partner = $this->getPartnerConfiguration($senderIdentity);
             if (!$partner) {
                 $this->logger->error("Punchout: Partner not found with identity: {$senderIdentity}");
-                return null;
+                throw new LocalizedException(__('Unable to find identity match!'));
             }
 
-            // Format address ID based on partner rules
             $formattedAddressId = $this->formatAddressId($addressId, $partner, $senderIdentity);
             $this->logger->info("Punchout: Formatted addressID from '{$addressId}' to '{$formattedAddressId}'");
 
-            // Get corpAddressId for partner
             $corpAddressId = $partner['corpAddressId'] ?? null;
             if (!$corpAddressId) {
                 $this->logger->error("Punchout: Missing corpAddressId for partner: {$senderIdentity}");
-                return null;
+                throw new LocalizedException(__('Unable to find identity match!'));
             }
 
-            // Validate the address exists in dealer lookup
             $validDealerCode = $this->getValidDealerCode($formattedAddressId);
             if (!$validDealerCode) {
                 $this->logger->error("Punchout: Dealer with addressId='{$formattedAddressId}' not found in lookupDealers");
-                return null;
+                throw new LocalizedException(
+                    __('Unable to match requested address id %1 to TireHub Ship To! Please contact your administrator', $addressId)
+                );
             }
 
-            // Validate the address belongs to this partner's common dealers
             $isAssociatedWithPartner = $this->validateAddressAssociatedWithPartner($validDealerCode, $corpAddressId);
             if (!$isAssociatedWithPartner) {
                 $this->logger->error("Punchout: validDealerCode='{$validDealerCode}' is not associated with partner's corpAddressId='{$corpAddressId}'");
-                return null;
+                throw new LocalizedException(
+                    __('Unable to match requested address id %1 to TireHub Ship To! Please contact your administrator', $addressId)
+                );
             }
 
             return $validDealerCode;

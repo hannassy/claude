@@ -3,6 +3,7 @@
     <body>
         <referenceContainer name="header.container" remove="true"/>
         <referenceContainer name="page.top" remove="true"/>
+        <referenceBlock name="talkdesk" remove="true"/>
 
         <referenceContainer name="content">
             <block class="Magento\Framework\View\Element\Template"

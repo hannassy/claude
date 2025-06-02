@@ -125,12 +125,30 @@ class Request
             $this->logger->error('Punchout: Error processing request: ' . $e->getMessage());
 
             $result = $this->rawFactory->create();
-            $responseXml = $this->cxmlProcessor->generateErrorResponse('400', $e->getMessage());
-
             $result->setHeader('Content-Type', self::CONTENT_TYPE_TEXT_XML);
-            $result->setHttpResponseCode(400);
-            $result->setContents($responseXml);
 
+            if (str_contains($e->getMessage(), 'Unable to find identity match')) {
+                $responseXml = $this->cxmlProcessor->generateInvalidIdentityResponse();
+                $result->setHttpResponseCode(400);
+            } elseif (str_contains($e->getMessage(), 'Invalid shared secret')) {
+                $responseXml = $this->cxmlProcessor->generateInvalidSharedSecretResponse();
+                $result->setHttpResponseCode(401);
+            } elseif (str_contains($e->getMessage(), 'Unable to match requested address id')) {
+                preg_match('/address id ([^\s]+) to/', $e->getMessage(), $matches);
+                $dealerCode = $matches[1] ?? '';
+                $responseXml = $this->cxmlProcessor->generateInvalidDealerCodeResponse($dealerCode);
+                $result->setHttpResponseCode(400);
+            } elseif (str_contains($e->getMessage(), 'not currently authorized')) {
+                preg_match('/location ([^\s]+) Is/', $e->getMessage(), $matches);
+                $dealerCode = $matches[1] ?? '';
+                $responseXml = $this->cxmlProcessor->generateUnauthorizedDealerResponse($dealerCode);
+                $result->setHttpResponseCode(401);
+            } else {
+                $responseXml = $this->cxmlProcessor->generateErrorResponse('400', $e->getMessage());
+                $result->setHttpResponseCode(400);
+            }
+
+            $result->setContents($responseXml);
             return $result;
         } catch (\Exception $e) {
             $this->logger->error('Punchout: Unexpected error: ' . $e->getMessage());

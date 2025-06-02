@@ -15,7 +15,6 @@ use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Store\Model\StoreManagerInterface;
 use Psr\Log\LoggerInterface;
-use Tirehub\ApiMiddleware\Api\Request\LookupCommonDealersInterface;
 use Tirehub\ApiMiddleware\Api\Request\LookupDealersInterface;
 use Tirehub\ApiMiddleware\Api\Request\AssertB2bContactInterface;
 use Tirehub\Punchout\Api\CreateCustomerInterface;
@@ -23,6 +22,10 @@ use Tirehub\Punchout\Model\Config;
 use Magento\Company\Api\CompanyRepositoryInterface;
 use Magento\Framework\Api\SearchCriteriaBuilder;
 use Magento\Company\Api\CompanyManagementInterface;
+use Magento\Eav\Api\AttributeRepositoryInterface;
+use Magento\Customer\Model\Customer;
+use Magento\Customer\Api\Data\CustomerExtensionFactory;
+use Magento\Company\Api\Data\CompanyCustomerInterfaceFactory;
 
 class CreateCustomer implements CreateCustomerInterface
 {
@@ -30,7 +33,6 @@ class CreateCustomer implements CreateCustomerInterface
         private readonly Config $config,
         private readonly CustomerInterfaceFactory $customerFactory,
         private readonly CustomerRepositoryInterface $customerRepository,
-        private readonly LookupCommonDealersInterface $lookupCommonDealers,
         private readonly LookupDealersInterface $lookupDealers,
         private readonly AddressInterfaceFactory $addressFactory,
         private readonly AddressRepositoryInterface $addressRepository,
@@ -40,7 +42,10 @@ class CreateCustomer implements CreateCustomerInterface
         private readonly LoggerInterface $logger,
         private readonly CompanyRepositoryInterface $companyRepository,
         private readonly SearchCriteriaBuilder $searchCriteriaBuilder,
-        private readonly CompanyManagementInterface $companyManagement
+        private readonly CompanyManagementInterface $companyManagement,
+        private readonly AttributeRepositoryInterface $attributeRepository,
+        private readonly CustomerExtensionFactory $customerExtensionFactory,
+        private readonly CompanyCustomerInterfaceFactory $companyCustomerFactory
     ) {
     }
 
@@ -82,12 +87,6 @@ class CreateCustomer implements CreateCustomerInterface
                     throw new LocalizedException(__('Cannot find company for reseller ID: %1', $dealerCode));
                 }
 
-                // Assign customer to company
-                $this->companyManagement->assignCustomer(
-                    $company->getId(),
-                    $customer->getId()
-                );
-
                 // Create address for customer
                 if ($customer->getId()) {
                     $this->createCustomerAddress($customer, $dealerCode, $company);
@@ -109,6 +108,13 @@ class CreateCustomer implements CreateCustomerInterface
     ): CustomerInterface {
         $websiteId = $this->storeManager->getWebsite()->getId();
 
+        // Get company first, before creating customer
+        $resellerId = $dealerInfo['customerId'] ?? null;
+        $company = $this->getCustomerCompany($resellerId);
+        if (!$company) {
+            throw new LocalizedException(__('Cannot find company for reseller ID: %1', $dealerCode));
+        }
+
         // Get customer details, preferring extrinsics but falling back to dealer info or defaults
         $firstName = $extrinsics['FirstName'] ?? ($dealerInfo['firstName'] ?? 'Punchout');
         $lastName = $extrinsics['LastName'] ?? ($dealerInfo['lastName'] ?? 'User');
@@ -121,12 +127,24 @@ class CreateCustomer implements CreateCustomerInterface
         $customer->setLastname($lastName);
         $customer->setEmail($this->generateEmail($dealerCode));
 
-        // Set custom attributes
-        $customer->setCustomAttribute('erp_user_role', '5644');
+        // Set custom attributes with dynamic option IDs
+        $erpUserRoleId = $this->getAttributeOptionId('erp_user_role', 'Admin');
+        if ($erpUserRoleId) {
+            $customer->setCustomAttribute('erp_user_role', $erpUserRoleId);
+        }
+
+        $viewBillingId = $this->getAttributeOptionId('view_billing', 'Active');
+        if ($viewBillingId) {
+            $customer->setCustomAttribute('view_billing', $viewBillingId);
+        }
+
+        $userRightsId = $this->getAttributeOptionId('user_rights', 'Place Order');
+        if ($userRightsId) {
+            $customer->setCustomAttribute('user_rights', $userRightsId);
+        }
+
         $customer->setCustomAttribute('erp_store', $dealerCode);
-        $customer->setCustomAttribute('view_billing', '20950');
         $customer->setCustomAttribute('retail_price_only', '0');
-        $customer->setCustomAttribute('user_rights', '9197');
         $customer->setCustomAttribute('user_dropshipping', '1');
         $customer->setCustomAttribute('role', '35605');
 
@@ -135,7 +153,17 @@ class CreateCustomer implements CreateCustomerInterface
             $customer->setCustomAttribute('mobile_phone', $phoneNumber);
         }
 
-        // Save and return customer
+        // Set company ID extension attribute before saving
+        $extensionAttributes = $customer->getExtensionAttributes();
+        if (!$extensionAttributes) {
+            $extensionAttributes = $this->customerExtensionFactory->create();
+        }
+        $companyAttributes = $this->companyCustomerFactory->create();
+        $companyAttributes->setCompanyId($company->getId());
+        $extensionAttributes->setCompanyAttributes($companyAttributes);
+        $customer->setExtensionAttributes($extensionAttributes);
+
+        // Save and return customer with company already assigned
         return $this->customerRepository->save($customer);
     }
 
@@ -384,5 +412,46 @@ class CreateCustomer implements CreateCustomerInterface
         }
 
         return $address;
+    }
+
+    private function getAttributeOptionId(string $attributeCode, string $label): ?string
+    {
+        try {
+            $attribute = $this->attributeRepository->get(
+                Customer::ENTITY,
+                $attributeCode
+            );
+
+            if (!$attribute->usesSource()) {
+                return null;
+            }
+
+            $options = $attribute->getSource()->getAllOptions();
+
+            foreach ($options as $option) {
+                if (strcasecmp(trim($option['label']), trim($label)) === 0) {
+                    return (string)$option['value'];
+                }
+            }
+
+            $this->logger->warning(
+                sprintf(
+                    'Punchout: Option with label "%s" not found for attribute "%s"',
+                    $label,
+                    $attributeCode
+                )
+            );
+
+            return null;
+        } catch (\Exception $e) {
+            $this->logger->error(
+                sprintf(
+                    'Punchout: Error getting option for attribute "%s": %s',
+                    $attributeCode,
+                    $e->getMessage()
+                )
+            );
+            return null;
+        }
     }
 }

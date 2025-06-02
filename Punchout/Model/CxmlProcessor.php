@@ -261,65 +261,33 @@ class CxmlProcessor
         return $this->extractAddressId->execute($addressId, $senderIdentity);
     }
 
-    /**
-     * Generate error response for invalid dealer code
-     *
-     * @param string $dealerCode The dealer code that failed validation
-     * @return string XML response
-     */
     public function generateInvalidDealerCodeResponse(string $dealerCode): string
     {
         $message = "Unable to match requested address id {$dealerCode} to TireHub Ship To! Please contact your administrator";
         return $this->generateErrorResponse('400', $message);
     }
 
-    /**
-     * Generate error response for invalid identity
-     *
-     * @return string XML response
-     */
     public function generateInvalidIdentityResponse(): string
     {
         return $this->generateErrorResponse('400', 'Unable to find identity match!');
     }
 
-    /**
-     * Generate error response for invalid shared secret
-     *
-     * @return string XML response
-     */
     public function generateInvalidSharedSecretResponse(): string
     {
         return $this->generateErrorResponse('401', 'Invalid shared secret!');
     }
 
-    /**
-     * Generate response for security violation with buyer cookie reuse
-     *
-     * @return string XML response
-     */
     public function generateBuyerCookieReuseResponse(): string
     {
-        return $this->generateErrorResponse('403', 'Security violation: This buyer cookie is already associated with a different partner');
+        return $this->generateErrorResponse('403', 'Security violation: This buyer cookie has already been used');
     }
 
-    /**
-     * Generate error response for unauthorized dealer in pilot mode
-     *
-     * @param string $dealerCode The dealer code that is not authorized
-     * @return string XML response
-     */
     public function generateUnauthorizedDealerResponse(string $dealerCode): string
     {
         $message = "This location {$dealerCode} Is not currently authorized to use TireHub punchout! Please contact your administrator";
         return $this->generateErrorResponse('401', $message);
     }
 
-    /**
-     * Generate error response for XML parsing issues
-     *
-     * @return string XML response
-     */
     public function generateInvalidXmlResponse(): string
     {
         return $this->generateErrorResponse(

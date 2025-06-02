@@ -58,12 +58,6 @@ class ShoppingStart
 
             // If we have a customer ID, log them in
             if ($customerId) {
-                // Make sure we're starting with a clean session
-                if ($this->customerSession->isLoggedIn()) {
-                    $this->customerSession->logout();
-                    $this->customerSession->regenerateId();
-                }
-
                 $session->setData(SessionInterface::STATUS, SessionInterface::STATUS_ACTIVE);
                 $this->sessionResource->save($session);
 

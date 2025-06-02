@@ -7,14 +7,14 @@ use Magento\Quote\Api\Data\AddressInterface;
 use Magento\Quote\Api\Data\PaymentInterface;
 use Silk\Checkout\Model\PaymentInformationManagement;
 use Tirehub\Punchout\Api\IsPunchoutModeInterface;
-use Tirehub\Punchout\Service\PunchoutOrderMessageGenerator;
+use Tirehub\Punchout\Model\Process\PlaceOrder as PlaceOrderProcess;
 use Magento\Sales\Api\OrderRepositoryInterface;
 
 class SavePaymentInformationAndPlaceOrder
 {
     public function __construct(
         private readonly IsPunchoutModeInterface $isPunchoutMode,
-        private readonly PunchoutOrderMessageGenerator $punchoutOrderMessageGenerator,
+        private readonly PlaceOrderProcess $placeOrderProcess,
         private readonly OrderRepositoryInterface $orderRepository
     ) {
     }
@@ -32,8 +32,6 @@ class SavePaymentInformationAndPlaceOrder
 
         $order = $this->orderRepository->get($result);
 
-        $someResult = $this->punchoutOrderMessageGenerator->execute($order);
-
-        return $someResult;
+        return $this->placeOrderProcess->execute($order);
     }
 }

@@ -11,6 +11,7 @@
         <referenceContainer name="page.top" remove="true"/>
         <referenceContainer name="page.bottom.container" remove="true"/>
         <referenceContainer name="before.body.end" remove="true"/>
+        <referenceBlock name="talkdesk" remove="true"/>
 
         <referenceContainer name="content">
             <block class="Magento\Framework\View\Element\Template"
