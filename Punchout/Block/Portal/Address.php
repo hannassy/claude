@@ -93,7 +93,7 @@ class Address extends Template
                 $data = [];
                 foreach ($result as $item) {
                     $data[] = [
-                        'label' => $item['shipToLocation']['locationName'] ?? '',
+                        'label' => $this->getLocationLabel($item),
                         'value' => $item['dealerCode'] ?? '',
                     ];
                 }
@@ -142,5 +142,28 @@ class Address extends Template
             $this->logger->error('Punchout: Error generating secure submit URL: ' . $e->getMessage());
             return $this->getUrl('punchout/portal/submit');
         }
+    }
+
+    private function getLocationLabel(array $item): string
+    {
+        $shipToLocation = $item['shipToLocation'] ?? [];
+
+        $label = $shipToLocation['locationName'] ?? '';
+        $label .= ' - ';
+        $label .= $shipToLocation['address']['address1'] ?? '';
+
+        if ($shipToLocation['address']['address2'] ?? '') {
+            $label .= ', ' . $shipToLocation['address']['address2'];
+        }
+
+        if ($shipToLocation['address']['address3'] ?? '') {
+            $label .= ', ' . $shipToLocation['address']['address3'];
+        }
+
+        $label .= ', ' . $shipToLocation['address']['city'] ?? '';
+        $label .= ', ' . $shipToLocation['address']['state'] ?? '';
+        $label .= ' ' . $shipToLocation['address']['postalCode'] ?? '';
+
+        return $label;
     }
 }

@@ -76,13 +76,8 @@ class Start extends Action implements HttpGetActionInterface
         }
     }
 
-    /**
-     * Validate the request and get the buyer cookie
-     */
     private function validateAndGetBuyerCookie(): ?string
     {
-        // Code for validating token remains the same...
-        // Check for the encrypted token first
         $token = $this->request->getParam(self::TOKEN_PARAM);
         if (!empty($token)) {
             try {
@@ -93,7 +88,6 @@ class Start extends Action implements HttpGetActionInterface
                     throw new LocalizedException(__('Invalid token format'));
                 }
 
-                // Validate token is not expired (30 min max)
                 $timestamp = (int)$tokenData['timestamp'];
                 if (time() - $timestamp > 1800) {
                     throw new LocalizedException(__('Token expired'));
@@ -105,7 +99,6 @@ class Start extends Action implements HttpGetActionInterface
                     'buyer_cookie' => $buyerCookie
                 ]);
 
-                // Store the buyer cookie as request parameter for downstream processing
                 $this->request->setParam('cookie', $buyerCookie);
 
                 return $buyerCookie;
@@ -115,13 +108,11 @@ class Start extends Action implements HttpGetActionInterface
             }
         }
 
-        // For backward compatibility, check if cookie parameter exists
         $buyerCookie = $this->request->getParam('cookie');
         if (empty($buyerCookie)) {
             throw new LocalizedException(__('Invalid request parameters'));
         }
 
-        // If using the old cookie parameter, verify the session exists
         $session = $this->sessionFactory->create();
         $session->load($buyerCookie, SessionInterface::BUYER_COOKIE);
 

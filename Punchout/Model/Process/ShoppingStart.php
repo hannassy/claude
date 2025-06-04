@@ -18,6 +18,11 @@ use Tirehub\Punchout\Model\ResourceModel\Item\CollectionFactory as ItemCollectio
 use Tirehub\Punchout\Model\ResourceModel\Item as ItemResource;
 use Tirehub\Punchout\Model\SessionFactory;
 use Tirehub\Punchout\Model\ResourceModel\Session as SessionResource;
+use Magento\Framework\Stdlib\Cookie\CookieMetadataFactory;
+use Magento\Framework\Stdlib\CookieManagerInterface;
+use Magento\Customer\Api\CustomerRepositoryInterface;
+use Magento\Framework\App\Http\Context as HttpContext;
+use Magento\Customer\Model\Context as CustomerContext;
 
 class ShoppingStart
 {
@@ -32,7 +37,11 @@ class ShoppingStart
         private readonly ProductRepositoryInterface $productRepository,
         private readonly LookupInventoryManagement $lookupInventoryManagement,
         private readonly RenderRegionalProductsInterface $renderRegionalProducts,
-        private readonly Monolog $logger
+        private readonly Monolog $logger,
+        private readonly CookieManagerInterface $cookieManager,
+        private readonly CookieMetadataFactory $cookieMetadataFactory,
+        private readonly CustomerRepositoryInterface $customerRepository,
+        private readonly HttpContext $httpContext
     ) {
     }
 
@@ -45,7 +54,6 @@ class ShoppingStart
                 throw new LocalizedException(__('Missing required cookie parameter'));
             }
 
-            // Load session by buyer cookie
             $session = $this->sessionFactory->create();
             $session->load($buyerCookie, SessionInterface::BUYER_COOKIE);
 
@@ -53,16 +61,53 @@ class ShoppingStart
                 throw new LocalizedException(__('Invalid session'));
             }
 
-            // Get customer ID from session
             $customerId = $session->getData(SessionInterface::CUSTOMER_ID);
 
-            // If we have a customer ID, log them in
             if ($customerId) {
+                // Clear any existing login state if customer ID is different
+                if ($this->customerSession->isLoggedIn() && $this->customerSession->getCustomerId() != $customerId) {
+                    $this->logger->info('Punchout: Logging out existing customer before punchout login');
+
+                    // Force logout and clear all session data
+                    $this->customerSession->logout();
+                    $this->customerSession->regenerateId();
+                    $this->customerSession->clearStorage();
+
+                    // Clear session cookies
+                    $metadata = $this->cookieMetadataFactory
+                        ->createPublicCookieMetadata()
+                        ->setDuration(0)
+                        ->setPath('/')
+                        ->setHttpOnly(false);
+
+                    $this->cookieManager->deleteCookie('private_content_version', $metadata);
+                    $this->cookieManager->deleteCookie('section_data_ids', $metadata);
+                    $this->cookieManager->deleteCookie('mage-cache-sessid', $metadata);
+
+                    // Force clear HTTP context
+                    $this->httpContext->setValue(CustomerContext::CONTEXT_AUTH, false, false);
+                    $this->httpContext->setValue(CustomerContext::CONTEXT_GROUP, 0, 0);
+
+                    // Small delay to ensure logout is processed
+                    usleep(500000); // 0.5 second
+                }
+
                 $session->setData(SessionInterface::STATUS, SessionInterface::STATUS_ACTIVE);
                 $this->sessionResource->save($session);
 
-                // Log in the customer
-                $this->customerSession->loginById($customerId);
+                // Log in the customer if not already logged in
+                if (!$this->customerSession->isLoggedIn()) {
+                    $this->customerSession->loginById($customerId);
+                    $this->customerSession->regenerateId();
+
+                    // Force new private content version
+                    $this->customerSession->setData('private_content_version', time());
+
+                    // Update HTTP context
+                    $customer = $this->customerRepository->getById($customerId);
+                    $this->httpContext->setValue(CustomerContext::CONTEXT_AUTH, true, false);
+                    $this->httpContext->setValue(CustomerContext::CONTEXT_GROUP, $customer->getGroupId(), 0);
+                }
 
                 // Enable punchout mode
                 $this->enablePunchoutMode->execute($buyerCookie);
@@ -88,18 +133,20 @@ class ShoppingStart
     private function clearCustomerCart(): void
     {
         try {
+            $quote = $this->cart->getQuote();
+
+            foreach ($quote->getAllItems() as $item) {
+                $quote->removeItem($item->getId());
+            }
+
+            $quote->collectTotals()->save();
+
             $this->cart->truncate()->save();
         } catch (\Exception $e) {
-            $this->logger->error('Punchout: Error during shopping start: ' . $e->getMessage());
+            $this->logger->error('Punchout: Error clearing cart: ' . $e->getMessage());
         }
     }
 
-    /**
-     * Add requested items to cart
-     *
-     * @param string $buyerCookie
-     * @return bool
-     */
     private function addItemsToCart(string $buyerCookie): bool
     {
         try {
@@ -116,7 +163,6 @@ class ShoppingStart
                     $result = $this->addProductToCart($item);
 
                     if ($result) {
-                        // Update item status to added
                         $item->setData('status', 'added');
                         $this->itemResource->save($item);
                         $itemsAdded = true;
@@ -134,12 +180,6 @@ class ShoppingStart
         }
     }
 
-    /**
-     * Load items by buyer cookie
-     *
-     * @param string $buyerCookie
-     * @return array
-     */
     private function loadItemsByBuyerCookie(string $buyerCookie): array
     {
         try {
@@ -154,16 +194,9 @@ class ShoppingStart
         }
     }
 
-    /**
-     * Add requested product to cart with proper location information
-     *
-     * @param DataObject $item Item to add to cart
-     * @return bool Success status
-     */
     private function addProductToCart(DataObject $item): bool
     {
         try {
-            // Get product ID from item SKU
             $sku = $item->getData('item_id');
             $productId = $this->getProductIdByItemId($sku);
 
@@ -172,17 +205,14 @@ class ShoppingStart
                 return false;
             }
 
-            // Determine quantity needed
             $totalQty = max((int)$item->getData('quantity'), 1);
 
-            // Prepare location lookup parameters
             $params = [
                 'itemId' => $sku,
                 'quantityNeeded' => 1,
                 'searchQuantityNeeded' => $totalQty
             ];
 
-            // Get available locations with inventory
             $locations = $this->lookupInventoryManagement->getResult($params);
             $locations = $this->renderRegionalProducts->execute($locations['results'] ?? [], $params);
 
@@ -191,13 +221,10 @@ class ShoppingStart
                 return false;
             }
 
-            // Process inventory from locations
             $processedLocations = $this->distributeQuantityAcrossLocations($locations, $totalQty);
 
-            // Remove existing items with same SKU from cart before adding new ones
             $this->removeExistingItemsFromCart($sku);
 
-            // Add products from each location
             foreach ($processedLocations as $locationData) {
                 if (!isset($locationData['itemId']) || empty($locationData['qty'])) {
                     continue;
@@ -207,7 +234,6 @@ class ShoppingStart
                 $this->addProductWithLocationData($product, $locationData);
             }
 
-            // Update cart totals
             $this->updateCartTotals();
 
             $this->logger->info('Punchout: Successfully added product to cart: ' . $sku);
@@ -218,12 +244,6 @@ class ShoppingStart
         }
     }
 
-    /**
-     * Get product ID by item ID (SKU)
-     *
-     * @param string $itemId
-     * @return int|null
-     */
     private function getProductIdByItemId(string $itemId): ?int
     {
         try {
@@ -235,13 +255,6 @@ class ShoppingStart
         }
     }
 
-    /**
-     * Distribute requested quantity across available inventory locations
-     *
-     * @param array $locations Available inventory locations
-     * @param int $totalQty Total quantity needed
-     * @return array Processed location data with assigned quantities
-     */
     private function distributeQuantityAcrossLocations(array $locations, int $totalQty): array
     {
         $processedLocations = [];
@@ -271,41 +284,21 @@ class ShoppingStart
         return $processedLocations;
     }
 
-    /**
-     * Add product to cart with location data
-     *
-     * @param \Magento\Catalog\Api\Data\ProductInterface $product Product to add
-     * @param array $locationData Location data with inventory
-     * @return void
-     * @throws LocalizedException
-     */
     private function addProductWithLocationData($product, array $locationData): void
     {
-        // Clean up unnecessary location data
         $requestData = $this->prepareLocationRequestData($locationData);
-
-        // Add product to cart
         $this->cart->addProduct($product, $requestData);
     }
 
-    /**
-     * Prepare location request data for cart
-     *
-     * @param array $locationData Raw location data
-     * @return array Cleaned location request data
-     */
     private function prepareLocationRequestData(array $locationData): array
     {
-        // Remove unnecessary data
         $cleanData = $locationData;
         unset($cleanData['pricingDetails']);
         unset($cleanData['address']);
         unset($cleanData['deliveryInfo']);
 
-        // Set required flags
         $cleanData['force'] = true;
 
-        // Set additional request parameters
         $requestParams = [
             'qty' => isset($cleanData['qty']) ? ($cleanData['qty'] ?: 1) : 1,
             'request' => $cleanData,
@@ -317,11 +310,6 @@ class ShoppingStart
         return array_merge($cleanData, $requestParams);
     }
 
-    /**
-     * Update cart totals
-     *
-     * @return void
-     */
     private function updateCartTotals(): void
     {
         $this->cart->getQuote()->setTotalsCollectedFlag(false);
@@ -329,33 +317,24 @@ class ShoppingStart
         $this->cart->save();
     }
 
-    /**
-     * Remove existing items with the same SKU from cart
-     *
-     * @param string $sku
-     * @return void
-     */
     private function removeExistingItemsFromCart(string $sku): void
     {
         try {
             $quote = $this->cart->getQuote();
             $itemsToRemove = [];
 
-            // Identify items with matching SKU
             foreach ($quote->getAllItems() as $item) {
                 if ($item->getSku() === $sku) {
                     $itemsToRemove[] = $item->getItemId();
                 }
             }
 
-            // Remove identified items
             foreach ($itemsToRemove as $itemId) {
                 $this->cart->removeItem($itemId);
             }
 
             if (!empty($itemsToRemove)) {
                 $this->logger->info('Punchout: Removed ' . count($itemsToRemove) . ' existing items with SKU: ' . $sku);
-                // Save cart after removing items
                 $this->cart->save();
             }
         } catch (\Exception $e) {
