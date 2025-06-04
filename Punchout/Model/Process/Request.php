@@ -143,6 +143,9 @@ class Request
                 $dealerCode = $matches[1] ?? '';
                 $responseXml = $this->cxmlProcessor->generateUnauthorizedDealerResponse($dealerCode);
                 $result->setHttpResponseCode(401);
+            } elseif (str_contains($e->getMessage(), 'missing required attributes')) {
+                $responseXml = $this->cxmlProcessor->generateInvalidXmlResponse();
+                $result->setHttpResponseCode(500);
             } else {
                 $responseXml = $this->cxmlProcessor->generateErrorResponse('400', $e->getMessage());
                 $result->setHttpResponseCode(400);

@@ -23,6 +23,7 @@ use Magento\Framework\Stdlib\CookieManagerInterface;
 use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Framework\App\Http\Context as HttpContext;
 use Magento\Customer\Model\Context as CustomerContext;
+use Magento\Framework\Session\SessionManagerInterface;
 
 class ShoppingStart
 {
@@ -41,7 +42,8 @@ class ShoppingStart
         private readonly CookieManagerInterface $cookieManager,
         private readonly CookieMetadataFactory $cookieMetadataFactory,
         private readonly CustomerRepositoryInterface $customerRepository,
-        private readonly HttpContext $httpContext
+        private readonly HttpContext $httpContext,
+        private readonly SessionManagerInterface $session
     ) {
     }
 
@@ -157,6 +159,7 @@ class ShoppingStart
             }
 
             $itemsAdded = false;
+            $failedItems = [];
 
             foreach ($items as $item) {
                 try {
@@ -166,11 +169,18 @@ class ShoppingStart
                         $item->setData('status', 'added');
                         $this->itemResource->save($item);
                         $itemsAdded = true;
+                    } else {
+                        $failedItems[] = $item->getData('item_id');
                     }
                 } catch (\Exception $e) {
                     $this->logger->error('Punchout: Error adding item to cart: ' . $e->getMessage());
+                    $failedItems[] = $item->getData('item_id');
                     continue;
                 }
+            }
+
+            if (!empty($failedItems)) {
+                $this->storeFailedItemsMessage($failedItems);
             }
 
             return $itemsAdded;
@@ -178,6 +188,19 @@ class ShoppingStart
             $this->logger->error('Punchout: Error processing items for cart: ' . $e->getMessage());
             return false;
         }
+    }
+
+    private function storeFailedItemsMessage(array $failedItems): void
+    {
+        $message = __('The following items could not be added to cart: %1', implode(', ', $failedItems));
+
+        $messages = $this->session->getData('punchout_deferred_messages') ?: [];
+        $messages[] = [
+            'type' => 'error',
+            'text' => $message->render()
+        ];
+
+        $this->session->setData('punchout_deferred_messages', $messages);
     }
 
     private function loadItemsByBuyerCookie(string $buyerCookie): array

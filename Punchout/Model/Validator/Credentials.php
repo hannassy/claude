@@ -18,6 +18,10 @@ class Credentials
      */
     public function execute($domain, $identity, $sharedSecret): void
     {
+        if (!$domain || !$identity || !$sharedSecret) {
+            throw new LocalizedException(__('Is missing required attributes'));
+        }
+
         $result = $this->getPunchoutPartnersManagement->getResult();
         $partner = [];
 

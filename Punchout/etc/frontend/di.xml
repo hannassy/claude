@@ -17,4 +17,14 @@
             </argument>
         </arguments>
     </type>
+
+    <type name="Magento\Checkout\Controller\Cart\Index">
+        <plugin name="punchout_display_messages_cart" type="Tirehub\Punchout\Plugin\Checkout\Cart\DisplayMessages"/>
+    </type>
+    <type name="Magento\Checkout\Controller\Index\Index">
+        <plugin name="punchout_display_messages_cart" type="Tirehub\Punchout\Plugin\Checkout\Index\DisplayMessages"/>
+    </type>
+    <type name="Magento\Customer\Controller\Account\Index">
+        <plugin name="punchout_display_messages_home" type="Tirehub\Punchout\Plugin\Customer\Account\DisplayMessages"/>
+    </type>
 </config>
