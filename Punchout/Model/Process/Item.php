@@ -15,6 +15,8 @@ use Tirehub\Punchout\Model\ResourceModel\Session as SessionResource;
 use Tirehub\Punchout\Service\GetPunchoutPartnersManagement;
 use Tirehub\Punchout\Service\ExtractAddressId;
 use Magento\Framework\Logger\Monolog;
+use Tirehub\Punchout\Model\Config;
+use Tirehub\Punchout\Model\LogFactory;
 
 class Item
 {
@@ -28,18 +30,17 @@ class Item
         private readonly ItemFactory $itemFactory,
         private readonly GetPunchoutPartnersManagement $getPunchoutPartnersManagement,
         private readonly ExtractAddressId $extractAddressId,
-        private readonly Monolog $logger
+        private readonly Monolog $logger,
+        private readonly Config $config,
+        private readonly LogFactory $logFactory
     ) {
     }
 
-    /**
-     * Process item request for punchout
-     *
-     * @param RequestInterface $request
-     * @return ResultInterface
-     */
     public function execute(RequestInterface $request): ResultInterface
     {
+        $buyerCookie = null;
+        $log = $this->logFactory->create();
+
         try {
             // Get required parameters
             $partnerIdentity = $request->getParam('partnerIdentity');
@@ -66,8 +67,15 @@ class Item
             }
 
             // Generate a unique buyerCookie (token) for this punchout session
-            // This will be used as the buyerCookie in subsequent steps
             $buyerCookie = md5($partnerIdentity . $dealerCode . uniqid('', true));
+
+            $log->logInfo('Processing item request', [
+                'partnerIdentity' => $partnerIdentity,
+                'dealerCode' => $dealerCode,
+                'itemId' => $itemId,
+                'quantityNeeded' => $quantityNeeded,
+                'buyerCookie' => $buyerCookie
+            ], $buyerCookie);
 
             // Check if we have multiple items (comma-separated)
             $itemIds = $itemId ? explode(',', $itemId) : [];
@@ -78,6 +86,11 @@ class Item
                     // Handle each item
                     $this->saveItemRequest($buyerCookie, $dealerCode, $partnerIdentity, $singleItemId, $quantityNeeded);
                 }
+
+                $log->logInfo('Saved item requests', [
+                    'items_count' => count($itemIds),
+                    'items' => $itemIds
+                ], $buyerCookie);
             }
 
             $corpAddressId = $this->getCorpAddressId($partnerIdentity);
@@ -92,15 +105,25 @@ class Item
             $session->setData(SessionInterface::ADDRESS_ID, $dealerCode);
             $this->sessionResource->save($session);
 
+            $log->logInfo('Created punchout session', [
+                'session_id' => $session->getId(),
+                'corp_address_id' => $corpAddressId
+            ], $buyerCookie);
+
             // Get redirect URL from partner settings
             $redirectUrl = $this->getRedirectUrl($partnerIdentity);
 
-            if (empty($redirectUrl) || $this->debugItemRedirectUrl) {
+            if (empty($redirectUrl) || !$this->config->isProcessItemRedirect()) {
                 // If no redirect URL is configured, return success response
                 $result = $this->rawFactory->create();
                 $result->setHttpResponseCode(200);
                 $result->setContents(json_encode(['success' => true, 'buyerCookie' => $buyerCookie]));
                 $result->setHeader('Content-Type', 'application/json');
+
+                $log->logInfo('Returning success response (debug mode)', [
+                    'redirectUrl' => $redirectUrl
+                ], $buyerCookie);
+
                 return $result;
             }
 
@@ -108,11 +131,21 @@ class Item
             $separator = (str_contains($redirectUrl, '?')) ? '&' : '?';
             $redirectUrl .= $separator . 'cookie=' . $buyerCookie;
 
+            $log->logInfo('Redirecting to partner URL', [
+                'redirectUrl' => $redirectUrl
+            ], $buyerCookie);
+
             // Redirect to partner URL
             $resultRedirect = $this->redirectFactory->create();
             return $resultRedirect->setUrl($redirectUrl);
         } catch (LocalizedException $e) {
             $this->logger->error('Punchout: Error processing item request: ' . $e->getMessage());
+
+            $log->logError('Error processing item request', [
+                'error' => $e->getMessage(),
+                'partnerIdentity' => $partnerIdentity ?? '',
+                'dealerCode' => $dealerCode ?? ''
+            ], $buyerCookie);
 
             $result = $this->rawFactory->create();
             $result->setHttpResponseCode(400);
@@ -122,6 +155,11 @@ class Item
         } catch (\Exception $e) {
             $this->logger->error('Punchout: Unexpected error processing item request: ' . $e->getMessage());
 
+            $log->logCritical('Unexpected error processing item request', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], $buyerCookie);
+
             $result = $this->rawFactory->create();
             $result->setHttpResponseCode(500);
             $result->setContents(json_encode(['error' => 'Internal server error']));
@@ -130,16 +168,6 @@ class Item
         }
     }
 
-    /**
-     * Save item request to database
-     *
-     * @param string $token
-     * @param string $dealerCode
-     * @param string $partnerIdentity
-     * @param string $itemId
-     * @param int $quantity
-     * @return void
-     */
     private function saveItemRequest(
         string $token,
         string $dealerCode,
@@ -174,12 +202,6 @@ class Item
         }
     }
 
-    /**
-     * Get redirect URL from partner settings
-     *
-     * @param string $partnerIdentity
-     * @return string|null
-     */
     private function getRedirectUrl(string $partnerIdentity): ?string
     {
         $punchoutPartners = $this->getPunchoutPartnersManagement->getResult();
@@ -193,12 +215,6 @@ class Item
         return null;
     }
 
-    /**
-     * Get corpAddressId from partner settings
-     *
-     * @param string $identity
-     * @return string|null
-     */
     private function getCorpAddressId(string $identity): ?string
     {
         $identity = strtolower($identity);

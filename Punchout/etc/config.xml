@@ -2,11 +2,17 @@
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
 	<default>
 		<punchout>
+			<general>
+				<enabled>1</enabled>
+			</general>
 			<customer>
 				<email_template>Punchout_shiptoID@tirehub.com</email_template>
+				<default_first_name>Punchout</default_first_name>
+				<default_last_name>User</default_last_name>
 			</customer>
 			<dev>
 				<is_debug_mode>1</is_debug_mode>
+				<process_item_redirect>1</process_item_redirect>
 			</dev>
 		</punchout>
 	</default>

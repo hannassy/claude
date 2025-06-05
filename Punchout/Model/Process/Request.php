@@ -204,16 +204,6 @@ class Request
         }
     }
 
-    /**
-     * Save session data
-     *
-     * @param string $buyerCookie
-     * @param string $identity
-     * @param array $extrinsics
-     * @param string $browserFormPostUrl
-     * @param string|null $addressId
-     * @return \Tirehub\Punchout\Model\Session
-     */
     private function saveSession(
         string $buyerCookie,
         string $identity,
@@ -275,12 +265,6 @@ class Request
         return $session;
     }
 
-    /**
-     * Get corp address ID from partner configuration
-     *
-     * @param string $identity
-     * @return string|null
-     */
     private function getCorpAddressId(string $identity): ?string
     {
         $identity = strtolower($identity);

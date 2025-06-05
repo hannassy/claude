@@ -24,6 +24,7 @@ use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Framework\App\Http\Context as HttpContext;
 use Magento\Customer\Model\Context as CustomerContext;
 use Magento\Framework\Session\SessionManagerInterface;
+use Tirehub\Punchout\Model\LogFactory;
 
 class ShoppingStart
 {
@@ -43,18 +44,26 @@ class ShoppingStart
         private readonly CookieMetadataFactory $cookieMetadataFactory,
         private readonly CustomerRepositoryInterface $customerRepository,
         private readonly HttpContext $httpContext,
-        private readonly SessionManagerInterface $session
+        private readonly SessionManagerInterface $session,
+        private readonly LogFactory $logFactory
     ) {
     }
 
     public function execute(RequestInterface $request): bool
     {
+        $buyerCookie = null;
+        $log = $this->logFactory->create();
+
         try {
             $buyerCookie = $request->getParam('cookie');
 
             if (empty($buyerCookie)) {
                 throw new LocalizedException(__('Missing required cookie parameter'));
             }
+
+            $log->logInfo('Starting shopping session', [
+                'buyerCookie' => $buyerCookie
+            ], $buyerCookie);
 
             $session = $this->sessionFactory->create();
             $session->load($buyerCookie, SessionInterface::BUYER_COOKIE);
@@ -69,6 +78,11 @@ class ShoppingStart
                 // Clear any existing login state if customer ID is different
                 if ($this->customerSession->isLoggedIn() && $this->customerSession->getCustomerId() != $customerId) {
                     $this->logger->info('Punchout: Logging out existing customer before punchout login');
+
+                    $log->logInfo('Logging out existing customer', [
+                        'existing_customer_id' => $this->customerSession->getCustomerId(),
+                        'new_customer_id' => $customerId
+                    ], $buyerCookie);
 
                     // Force logout and clear all session data
                     $this->customerSession->logout();
@@ -109,6 +123,11 @@ class ShoppingStart
                     $customer = $this->customerRepository->getById($customerId);
                     $this->httpContext->setValue(CustomerContext::CONTEXT_AUTH, true, false);
                     $this->httpContext->setValue(CustomerContext::CONTEXT_GROUP, $customer->getGroupId(), 0);
+
+                    $log->logInfo('Customer logged in successfully', [
+                        'customer_id' => $customerId,
+                        'customer_email' => $customer->getEmail()
+                    ], $buyerCookie);
                 }
 
                 // Enable punchout mode
@@ -118,16 +137,31 @@ class ShoppingStart
 
                 $this->clearCustomerCart();
 
+                $log->logInfo('Cart cleared', [], $buyerCookie);
+
                 // Add requested items to cart if any
-                return $this->addItemsToCart($buyerCookie);
+                $hasItems = $this->addItemsToCart($buyerCookie);
+
+                return $hasItems;
             }
 
             return false;
         } catch (LocalizedException $e) {
             $this->logger->error('Punchout: Error during shopping start: ' . $e->getMessage());
+
+            $log->logError('Error during shopping start', [
+                'error' => $e->getMessage()
+            ], $buyerCookie);
+
             throw $e;
         } catch (\Exception $e) {
             $this->logger->error('Punchout: Unexpected error during shopping start: ' . $e->getMessage());
+
+            $log->logCritical('Unexpected error during shopping start', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], $buyerCookie);
+
             throw $e;
         }
     }
@@ -151,12 +185,19 @@ class ShoppingStart
 
     private function addItemsToCart(string $buyerCookie): bool
     {
+        $log = $this->logFactory->create();
+
         try {
             $items = $this->loadItemsByBuyerCookie($buyerCookie);
 
             if (empty($items)) {
+                $log->logInfo('No items to add to cart', [], $buyerCookie);
                 return false;
             }
+
+            $log->logInfo('Found items to add to cart', [
+                'items_count' => count($items)
+            ], $buyerCookie);
 
             $itemsAdded = false;
             $failedItems = [];
@@ -169,23 +210,47 @@ class ShoppingStart
                         $item->setData('status', 'added');
                         $this->itemResource->save($item);
                         $itemsAdded = true;
+
+                        $log->logInfo('Item added to cart', [
+                            'item_id' => $item->getData('item_id'),
+                            'quantity' => $item->getData('quantity')
+                        ], $buyerCookie);
                     } else {
                         $failedItems[] = $item->getData('item_id');
+
+                        $log->logWarning('Failed to add item to cart', [
+                            'item_id' => $item->getData('item_id')
+                        ], $buyerCookie);
                     }
                 } catch (\Exception $e) {
                     $this->logger->error('Punchout: Error adding item to cart: ' . $e->getMessage());
                     $failedItems[] = $item->getData('item_id');
+
+                    $log->logError('Error adding item to cart', [
+                        'item_id' => $item->getData('item_id'),
+                        'error' => $e->getMessage()
+                    ], $buyerCookie);
+
                     continue;
                 }
             }
 
             if (!empty($failedItems)) {
                 $this->storeFailedItemsMessage($failedItems);
+
+                $log->logWarning('Some items failed to add to cart', [
+                    'failed_items' => $failedItems
+                ], $buyerCookie);
             }
 
             return $itemsAdded;
         } catch (\Exception $e) {
             $this->logger->error('Punchout: Error processing items for cart: ' . $e->getMessage());
+
+            $log->logError('Error processing items for cart', [
+                'error' => $e->getMessage()
+            ], $buyerCookie);
+
             return false;
         }
     }

@@ -5,9 +5,64 @@
             <label>Punchout</label>
             <tab>silk</tab>
             <resource>Tirehub_Punchout::punchout</resource>
-            <group id="general" translate="label" type="text" sortOrder="900" showInDefault="1" showInWebsite="1" showInStore="1">
-                <label>General</label>
+<!--            <group id="general" translate="label" type="text" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="1">-->
+<!--                <label>General Settings</label>-->
+<!--                <field id="enabled" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">-->
+<!--                    <label>Enable Punchout</label>-->
+<!--                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>-->
+<!--                    <comment>Enable or disable punchout functionality</comment>-->
+<!--                </field>-->
+<!--            </group>-->
+            <group id="customer" translate="label" type="text" sortOrder="200" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Customer Settings</label>
+                <field id="email_template" translate="label comment" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Email Template</label>
+                    <comment>Email template for punchout customers. Use shiptoID as placeholder (e.g., Punchout_shiptoID@tirehub.com)</comment>
+                    <validate>required-entry</validate>
+                </field>
+<!--                <field id="default_first_name" translate="label comment" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">-->
+<!--                    <label>Default First Name</label>-->
+<!--                    <comment>Default first name when not provided in cXML</comment>-->
+<!--                </field>-->
+<!--                <field id="default_last_name" translate="label comment" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">-->
+<!--                    <label>Default Last Name</label>-->
+<!--                    <comment>Default last name when not provided in cXML</comment>-->
+<!--                </field>-->
             </group>
+            <group id="dev" translate="label" type="text" sortOrder="300" showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>Developer Settings</label>
+                <field id="is_debug_mode" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Debug Mode</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Enable debug mode to store cXML requests in database</comment>
+                </field>
+                <field id="process_item_redirect" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Redirect on request item</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>If disabled - buyer cookie will be shown on frontend without redirecting</comment>
+                </field>
+            </group>
+            <group id="item_setup" translate="label" type="text" sortOrder="400" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Item Setup Settings</label>
+                <field id="debug_redirect" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Debug Redirect Mode</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>When enabled, returns JSON response instead of redirecting</comment>
+                </field>
+                <field id="default_quantity" translate="label comment" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Default Item Quantity</label>
+                    <comment>Default quantity when not specified</comment>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                </field>
+            </group>
+<!--            <group id="session" translate="label" type="text" sortOrder="500" showInDefault="1" showInWebsite="1" showInStore="1">-->
+<!--                <label>Session Settings</label>-->
+<!--                <field id="session_timeout" translate="label comment" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">-->
+<!--                    <label>Session Timeout (minutes)</label>-->
+<!--                    <comment>Time in minutes before a punchout session expires</comment>-->
+<!--                    <validate>validate-number validate-greater-than-zero</validate>-->
+<!--                </field>-->
+<!--            </group>-->
         </section>
     </system>
 </config>

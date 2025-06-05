@@ -21,4 +21,9 @@ class Config
     {
         return (bool)$this->scopeConfig->getValue('punchout/dev/is_debug_mode');
     }
+
+    public function isProcessItemRedirect(): bool
+    {
+        return (bool)$this->scopeConfig->getValue('punchout/dev/process_item_redirect');
+    }
 }

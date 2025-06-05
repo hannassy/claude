@@ -13,7 +13,8 @@ use Tirehub\Punchout\Api\Data\SessionInterface;
 use Tirehub\Punchout\Api\DisablePunchoutModeInterface;
 use Tirehub\Punchout\Model\ResourceModel\Session as SessionResource;
 use Tirehub\Punchout\Service\GetPunchoutPartnersManagement;
-use \Tirehub\Catalog\Api\GetProductBrandServiceInterface;
+use Tirehub\Catalog\Api\GetProductBrandServiceInterface;
+use Tirehub\Punchout\Model\LogFactory;
 
 class PlaceOrder
 {
@@ -27,14 +28,24 @@ class PlaceOrder
         private readonly SessionFactory $sessionFactory,
         private readonly DisablePunchoutModeInterface $disablePunchoutMode,
         private readonly SessionResource $sessionResource,
-        private readonly GetProductBrandServiceInterface $getProductBrandService
+        private readonly GetProductBrandServiceInterface $getProductBrandService,
+        private readonly LogFactory $logFactory
     ) {
     }
 
     public function execute(Order $order): array
     {
+        $buyerCookie = null;
+        $log = $this->logFactory->create();
+
         try {
             $buyerCookie = $this->customerSession->getData('buyer_cookie');
+
+            $log->logInfo('Processing punchout order', [
+                'order_id' => $order->getId(),
+                'erp_order_number' => $order->getErpOrderNumber(),
+                'buyerCookie' => $buyerCookie
+            ], $buyerCookie);
 
             $session = $this->sessionFactory->create();
             $session->load($buyerCookie, 'buyer_cookie');
@@ -49,11 +60,27 @@ class PlaceOrder
                 throw new \Exception('Missing browser_form_post_url');
             }
 
+            $log->logInfo('Retrieved session data', [
+                'session_id' => $session->getId(),
+                'corp_address_id' => $corpAddressId,
+                'browser_form_post_url' => $browserFormPostUrl
+            ], $buyerCookie);
+
             // Get partner settings
             $partner = $this->getPartner($corpAddressId);
 
+            if (!$partner) {
+                $log->logWarning('Partner not found for corp address', [
+                    'corp_address_id' => $corpAddressId
+                ], $buyerCookie);
+            }
+
             // Generate cXML document
             $cxml = $this->generateCxml($order, $session, $partner);
+
+            $log->logInfo('Generated cXML document', [
+                'cxml_length' => strlen($cxml)
+            ], $buyerCookie);
 
             // Prepare browser post form data
             $formData = [
@@ -67,7 +94,6 @@ class PlaceOrder
                 $session->setData(SessionInterface::STATUS, SessionInterface::STATUS_COMPLETED);
 
                 // Optionally link the order to the session for reference
-                // You might want to add an order_id column to your session table for this
                 if ($order->getId()) {
                     $session->setData(SessionInterface::ERP_ORDER_NUMBER, $order->getErpOrderNumber());
                 }
@@ -75,28 +101,44 @@ class PlaceOrder
                 // Save the updated session
                 $this->sessionResource->save($session);
 
+                $log->logInfo('Session updated to completed status', [
+                    'session_id' => $session->getId(),
+                    'erp_order_number' => $order->getErpOrderNumber()
+                ], $buyerCookie);
+
                 $this->disablePunchoutMode->execute();
 
                 // Log out the customer
                 $this->customerSession->logout();
+
+                $log->logInfo('Punchout session completed, customer logged out', [], $buyerCookie);
 
                 $this->logger->info("Punchout: Session {$session->getId()} marked as completed for order {$order->getErpOrderNumber()}");
 
                 return $formData;
             } catch (\Exception $e) {
                 $this->logger->error("Punchout: Error updating session status: {$e->getMessage()}");
+
+                $log->logError('Error updating session status', [
+                    'error' => $e->getMessage()
+                ], $buyerCookie);
+
                 // Still return form data even if status update fails
                 return $formData;
             }
         } catch (\Exception $e) {
             $this->logger->error('Punchout: Error generating order message: ' . $e->getMessage());
+
+            $log->logCritical('Error generating order message', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'order_id' => $order->getId() ?? null
+            ], $buyerCookie);
+
             throw $e;
         }
     }
 
-    /**
-     * Get partner configuration by domain
-     */
     private function getPartner(string $corpAddressId): ?array
     {
         $partners = $this->getPunchoutPartnersManagement->getResult();
@@ -111,9 +153,6 @@ class PlaceOrder
         return null;
     }
 
-    /**
-     * Generate cXML document for order message
-     */
     private function generateCxml(Order $order, PunchoutSession $punchoutSession, ?array $partner): string
     {
         $currentDate = $this->timezone->date()->format('Y-m-d\TH:i:s.uP');
@@ -129,19 +168,19 @@ class PlaceOrder
         // Add header
         $header = $xml->addChild('Header');
 
-        // From section // TODO
+        // From section
         $from = $header->addChild('From');
         $fromCredential = $from->addChild('Credential');
         $fromCredential->addAttribute('domain', 'DUNS');
         $fromCredential->addChild('Identity', '08-125-4817');
 
-        // To section // TODO
+        // To section
         $to = $header->addChild('To');
         $toCredential = $to->addChild('Credential');
         $toCredential->addAttribute('domain', 'DUNS');
         $toCredential->addChild('Identity', $partner['identity'] ?? '');
 
-        // Sender section // TODO
+        // Sender section
         $sender = $header->addChild('Sender');
         $senderCredential = $sender->addChild('Credential');
         $senderCredential->addAttribute('domain', 'DUNS');
