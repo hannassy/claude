@@ -144,6 +144,14 @@
                 <label translate="true">Updated</label>
             </settings>
         </column>
+        <actionsColumn name="session_logs" class="Tirehub\Punchout\Ui\Component\Listing\Column\SessionLogs">
+            <settings>
+                <indexField>entity_id</indexField>
+                <label translate="true">Logs</label>
+                <draggable>false</draggable>
+                <sortable>false</sortable>
+            </settings>
+        </actionsColumn>
     </columns>
 
     <!-- Modal for displaying cXML content -->

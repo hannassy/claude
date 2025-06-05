@@ -46,4 +46,27 @@
             <column name="token"/>
         </index>
     </table>
+
+    <table name="tirehub_punchout_log" resource="default" engine="innodb" comment="PunchOut Log Table">
+        <column xsi:type="int" name="entity_id" padding="10" unsigned="true" nullable="false" identity="true" comment="Log ID"/>
+        <column xsi:type="int" name="session_id" padding="10" unsigned="true" nullable="false" comment="Session ID"/>
+        <column xsi:type="varchar" name="level" nullable="false" length="32" comment="Log Level"/>
+        <column xsi:type="varchar" name="message" nullable="false" length="1024" comment="Log Message"/>
+        <column xsi:type="text" name="context" nullable="true" comment="Context Data (JSON)"/>
+        <column xsi:type="varchar" name="source" nullable="true" length="255" comment="Source Class/Module"/>
+        <column xsi:type="timestamp" name="created_at" on_update="false" nullable="false" default="CURRENT_TIMESTAMP" comment="Created At"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="entity_id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="TIREHUB_PUNCHOUT_LOG_SESSION_ID_TIREHUB_PUNCHOUT_SESSION_ENTITY_ID"
+                table="tirehub_punchout_log" column="session_id" referenceTable="tirehub_punchout_session"
+                referenceColumn="entity_id" onDelete="CASCADE"/>
+        <index referenceId="TIREHUB_PUNCHOUT_LOG_SESSION_ID_LEVEL" indexType="btree">
+            <column name="session_id"/>
+            <column name="level"/>
+        </index>
+        <index referenceId="TIREHUB_PUNCHOUT_LOG_CREATED_AT" indexType="btree">
+            <column name="created_at"/>
+        </index>
+    </table>
 </schema>

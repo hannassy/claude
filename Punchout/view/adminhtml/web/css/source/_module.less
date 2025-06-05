@@ -144,3 +144,141 @@
 .modal-popup .modal-inner-wrap .modal-content {
   padding: 0;
 }
+
+/* Logs styles */
+.logs-content-container {
+  max-height: 70vh;
+  overflow: auto;
+  padding: 0;
+  min-height: 200px;
+  position: relative;
+}
+
+.logs-container {
+  font-family: monospace;
+  line-height: 1.5;
+}
+
+.logs-header {
+  padding: 10px 15px;
+  background: #f8f8f8;
+  border-bottom: 1px solid #e3e3e3;
+  margin-bottom: 0;
+}
+
+.logs-title {
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 5px;
+}
+
+.logs-summary {
+  font-size: 12px;
+  color: #666;
+}
+
+.logs-filters {
+  padding: 10px 15px;
+  background: #f8f8f8;
+  border-bottom: 1px solid #e3e3e3;
+}
+
+.logs-filters select {
+  padding: 5px 10px;
+  border: 1px solid #c2c2c2;
+  background: white;
+}
+
+.logs-entries {
+  padding: 0;
+}
+
+.log-entry {
+  padding: 10px 15px;
+  border-bottom: 1px solid #e3e3e3;
+  background: white;
+}
+
+.log-entry:nth-child(even) {
+  background: #fafafa;
+}
+
+.log-header {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 5px;
+  font-size: 12px;
+}
+
+.log-level {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.log-level-debug {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.log-level-info {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.log-level-warning {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.log-level-error {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.log-level-critical {
+  background: #721c24;
+  color: white;
+}
+
+.log-time {
+  color: #666;
+}
+
+.log-source {
+  color: #999;
+  font-style: italic;
+}
+
+.log-message {
+  font-size: 13px;
+  margin-bottom: 5px;
+  word-wrap: break-word;
+}
+
+.log-context {
+  margin-top: 5px;
+}
+
+.log-context a {
+  font-size: 12px;
+  color: #006bb4;
+  text-decoration: none;
+}
+
+.log-context a:hover {
+  text-decoration: underline;
+}
+
+.context-data {
+  margin-top: 10px;
+  padding: 10px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  font-size: 11px;
+  overflow-x: auto;
+  max-height: 300px;
+  overflow-y: auto;
+}

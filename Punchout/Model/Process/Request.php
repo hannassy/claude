@@ -13,7 +13,9 @@ use Tirehub\Punchout\Api\Data\SessionInterface;
 use Tirehub\Punchout\Model\CxmlProcessor;
 use Tirehub\Punchout\Model\SessionFactory;
 use Tirehub\Punchout\Model\ResourceModel\Session as SessionResource;
+use Tirehub\Punchout\Service\GetPunchoutPartnersManagement;
 use Tirehub\Punchout\Service\TokenGenerator;
+use Tirehub\Punchout\Model\LogFactory;
 
 class Request
 {
@@ -27,27 +29,41 @@ class Request
         private readonly CreateCustomerInterface $createCustomer,
         private readonly TokenGenerator $tokenGenerator,
         private readonly Monolog $logger,
-        private readonly \Tirehub\Punchout\Service\GetPunchoutPartnersManagement $getPunchoutPartnersManagement
+        private readonly GetPunchoutPartnersManagement $getPunchoutPartnersManagement,
+        private readonly LogFactory $logFactory
     ) {
     }
 
-    /**
-     * Process request for punchout
-     *
-     * @param RequestInterface $request
-     * @return ResultInterface
-     */
     public function execute(RequestInterface $request): ResultInterface
     {
+        $buyerCookie = null;
+        $log = $this->logFactory->create();
+
         try {
             $content = $request->getContent();
 
+            $log->logInfo('Processing punchout request', [
+                'content_length' => strlen($content),
+                'request_method' => $request->getMethod()
+            ]);
+
             try {
                 $parsedData = $this->cxmlProcessor->parseRequest($content);
+                $buyerCookie = $parsedData['buyer_cookie'] ?? null;
+
+                $log->logInfo('Successfully parsed cXML request', [
+                    'buyer_cookie' => $buyerCookie,
+                    'sender_identity' => $parsedData['sender']['identity'] ?? '',
+                    'has_address_id' => !empty($parsedData['address_id'])
+                ], $buyerCookie);
+
             } catch (LocalizedException $e) {
-                // Check if the exception is specifically for buyer cookie reuse
                 if (str_contains($e->getMessage(), 'Security violation: This buyer cookie has already been used')) {
                     $this->logger->warning('Punchout: Security violation - buyer cookie reuse detected');
+                    $log->logCritical('Security violation - buyer cookie reuse detected', [
+                        'error' => $e->getMessage()
+                    ], $buyerCookie);
+
                     $result = $this->rawFactory->create();
                     $responseXml = $this->cxmlProcessor->generateBuyerCookieReuseResponse();
                     $result->setHeader('Content-Type', self::CONTENT_TYPE_TEXT_XML);
@@ -58,21 +74,24 @@ class Request
                 throw $e;
             }
 
-            // Validate credentials
+            $log->logDebug('Validating credentials', [
+                'domain' => $parsedData['sender']['domain'],
+                'identity' => $parsedData['sender']['identity']
+            ], $buyerCookie);
+
             $this->cxmlProcessor->validateCredentials(
                 $parsedData['sender']['domain'],
                 $parsedData['sender']['identity'],
                 $parsedData['sender']['shared_secret']
             );
 
-            // Extract data
-            $buyerCookie = $parsedData['buyer_cookie'];
+            $log->logInfo('Credentials validated successfully', [], $buyerCookie);
+
             $extrinsics = $parsedData['extrinsics'] ?? [];
             $browserFormPostUrl = $parsedData['browser_form_post_url'] ?? '';
             $addressId = $parsedData['address_id'] ?? null;
             $identity = $parsedData['sender']['identity'] ?? '';
 
-            // Create session
             $session = $this->saveSession(
                 $buyerCookie,
                 $identity,
@@ -81,20 +100,19 @@ class Request
                 $addressId
             );
 
-            // If in debug mode and cXML request is available, save it
             if (isset($parsedData['cxml_request'])) {
                 $session->setData('cxml_request', $parsedData['cxml_request']);
                 $this->sessionResource->save($session);
             }
 
-            // If no addressID in shipToAddress, redirect to portal for selection
             if (!$addressId) {
                 $this->logger->info('Punchout: No valid addressID found, redirecting to portal');
+                $log->logInfo('No valid addressID found, redirecting to portal', [
+                    'session_id' => $session->getId()
+                ], $buyerCookie);
 
-                // Generate secure portal URL with the session buyer_cookie
                 $portalUrl = $this->tokenGenerator->generatePortalUrl($buyerCookie);
 
-                // Generate response with secure portal URL
                 $result = $this->rawFactory->create();
                 $responseXml = $this->cxmlProcessor->generateSuccessResponse($portalUrl);
 
@@ -104,14 +122,20 @@ class Request
                 return $result;
             }
 
-            // If we have a valid addressId, create customer
+            $log->logInfo('Creating customer with address ID', [
+                'address_id' => $addressId
+            ], $buyerCookie);
+
             $customerId = $this->createCustomer->execute($extrinsics, $addressId);
 
-            // Update session with customer ID
+            $log->logInfo('Customer created successfully', [
+                'customer_id' => $customerId,
+                'address_id' => $addressId
+            ], $buyerCookie);
+
             $session->setData(SessionInterface::CUSTOMER_ID, $customerId);
             $this->sessionResource->save($session);
 
-            // Generate response with secure shopping URL
             $result = $this->rawFactory->create();
             $shoppingUrl = $this->tokenGenerator->generateShoppingStartUrl($buyerCookie);
 
@@ -120,10 +144,19 @@ class Request
             $result->setHeader('Content-Type', self::CONTENT_TYPE_TEXT_XML);
             $result->setContents($responseXml);
 
+            $log->logInfo('Punchout request completed successfully', [
+                'redirect_url' => $shoppingUrl
+            ], $buyerCookie);
+
             return $result;
         } catch (LocalizedException $e) {
             $this->logger->error('Punchout: Error processing request: ' . $e->getMessage());
+            $log->logError('Error processing request', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], $buyerCookie);
 
+            // Rest of error handling...
             $result = $this->rawFactory->create();
             $result->setHeader('Content-Type', self::CONTENT_TYPE_TEXT_XML);
 
@@ -155,6 +188,10 @@ class Request
             return $result;
         } catch (\Exception $e) {
             $this->logger->error('Punchout: Unexpected error: ' . $e->getMessage());
+            $log->logCritical('Unexpected error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], $buyerCookie);
 
             $result = $this->rawFactory->create();
             $responseXml = $this->cxmlProcessor->generateErrorResponse('500', 'Internal Server Error');
