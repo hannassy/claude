@@ -215,4 +215,35 @@
             </argument>
         </insertListing>
     </modal>
+
+    <!-- Modal for displaying session logs -->
+    <modal name="session_logs_modal">
+        <settings>
+            <options>
+                <option name="title" xsi:type="string" translate="true">Session Logs</option>
+                <option name="buttons" xsi:type="array">
+                    <item name="0" xsi:type="array">
+                        <item name="text" xsi:type="string" translate="true">Close</item>
+                        <item name="class" xsi:type="string">action-primary</item>
+                        <item name="actions" xsi:type="array">
+                            <item name="0" xsi:type="string">closeModal</item>
+                        </item>
+                    </item>
+                </option>
+            </options>
+        </settings>
+        <insertListing name="logs_content">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="component" xsi:type="string">Tirehub_Punchout/js/grid/logs-content</item>
+                    <item name="autoRender" xsi:type="boolean">false</item>
+                    <item name="dataScope" xsi:type="string">logs_content</item>
+                    <item name="namespace" xsi:type="string">logs_content</item>
+                    <item name="externalProvider" xsi:type="string">logs_content.logs_content_data_source</item>
+                    <item name="loading" xsi:type="boolean">false</item>
+                    <item name="ajaxUrl" xsi:type="url" path="punchout/session/getlogs"/>
+                </item>
+            </argument>
+        </insertListing>
+    </modal>
 </listing>
