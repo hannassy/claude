@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
-    <event name="customer_login">
-        <observer name="clear_punchout_session" instance="Tirehub\Punchout\Observer\ClearSession"/>
-        <observer name="punchout_customer_login_complete" instance="Tirehub\Punchout\Observer\CustomerLoginComplete"/>
-    </event>
-</config>

@@ -75,10 +75,10 @@ class PlaceOrder
                 // Save the updated session
                 $this->sessionResource->save($session);
 
-                //$this->disablePunchoutMode->execute();
+                $this->disablePunchoutMode->execute();
 
                 // Log out the customer
-                //$this->customerSession->logout();
+                $this->customerSession->logout();
 
                 $this->logger->info("Punchout: Session {$session->getId()} marked as completed for order {$order->getErpOrderNumber()}");
 
