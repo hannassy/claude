@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <preference for="Tirehub\CssPriceAdjustment\Api\DiscountDataProviderInterface"
+                type="Tirehub\TirePromo\Model\DummyDiscountDataProvider"/>
+    <preference for="Tirehub\TirePromo\Api\CurrentPromoCodeManagementInterface"
+                type="Tirehub\TirePromo\Service\CurrentPromoCodeService"/>
+    <preference for="Tirehub\TirePromo\Api\PromoCodeStorageInterface"
+                type="Tirehub\TirePromo\Model\PromoCodeDbStorage"/>
+    <preference for="Tirehub\TirePromo\Api\LookupPromoCodeInterface"
+                type="Tirehub\TirePromo\Service\LookupPromoCodeService"/>
+    <preference for="Tirehub\TirePromo\Api\LogRepositoryInterface" type="Tirehub\TirePromo\Model\LogRepository"/>
+    <preference for="Tirehub\TirePromo\Api\Data\LogInterface" type="Tirehub\TirePromo\Model\Log"/>
+
+    <type name="Tirehub\TirePromo\Service\CurrentPromoCodeService">
+        <arguments>
+            <argument name="checkoutSession" xsi:type="object">Magento\Checkout\Model\Session\Proxy</argument>
+        </arguments>
+    </type>
+
+    <type name="Tirehub\TirePromo\Service\LookupPromoCodeService">
+        <arguments>
+            <argument name="checkoutSession" xsi:type="object">Magento\Checkout\Model\Session\Proxy</argument>
+        </arguments>
+    </type>
+
+    <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
+        <arguments>
+            <argument name="collections" xsi:type="array">
+                <item name="tirepromo_log_listing_data_source" xsi:type="string">Tirehub\TirePromo\Model\ResourceModel\Log\Grid\Collection</item>
+            </argument>
+        </arguments>
+    </type>
+
+    <virtualType name="Tirehub\TirePromo\Model\ResourceModel\Log\Grid\Collection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">tirepromo_log</argument>
+            <argument name="resourceModel" xsi:type="string">Tirehub\TirePromo\Model\ResourceModel\Log</argument>
+        </arguments>
+    </virtualType>
+</config>

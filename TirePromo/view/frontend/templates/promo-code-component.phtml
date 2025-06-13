@@ -1,0 +1,41 @@
+<script type="text/x-template" id="promo-component-template" v-cloak>
+    <div class="promo-code-component" v-if="code">
+        <div class="promo-code-component-section">
+            <div class="promo-code-component-section-left">{{ t('Promo') }}</div>
+            <div class="promo-code-component-section-right promo-code-component-section-value discount" v-if="percent">
+                <span>{{ percent }}%</span>
+                <span>{{ t('off') }}</span>
+            </div>
+            <div class="promo-code-component-section-right promo-code-component-section-value discount" v-else>
+                <span>{{ value }}</span>
+                <span>{{ t('off per unit') }}</span>
+            </div>
+        </div>
+        <div class="promo-code-component-code" @click="copyToClipboard(code)">
+            <div class="promo-code-component-code-value">{{ code }}</div>
+            <div class="promo-code-component-code-copy" v-if="!copiedToClipboard">{{ t('Copy Code') }}</div>
+            <div v-else class="promo-code-component-code-copied">
+                <div class="promo-code-component-code-copied-icon"></div>
+                <div>{{ t('Copied!') }}</div>
+            </div>
+        </div>
+        <div class="promo-code-component-section">
+            <div class="promo-code-component-section promo-code-component-section-left promo-code-component-section-qty"
+                 v-if="minQty || maxQty"
+            >
+                <div v-if="minQty">
+                    <span>{{ t('Min:') }}</span>
+                    <span class="promo-code-component-section-value">{{ minQty }}</span>
+                </div>
+                <div class="promo-code-component-section-right" v-if="maxQty">
+                    <span>{{ t('Max:') }}</span>
+                    <span class="promo-code-component-section-value">{{ maxQty }}</span>
+                </div>
+            </div>
+            <div class="promo-code-component-section-right">
+                <span>{{ t('Ends on') }}</span>
+                <span class="promo-code-component-section-value">{{ endDate }}</span>
+            </div>
+        </div>
+    </div>
+</script>
