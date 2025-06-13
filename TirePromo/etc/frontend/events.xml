@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
+    <event name="sales_quote_remove_item">
+        <observer name="resend_promocode_remove" instance="Tirehub\TirePromo\Observer\ResendPromoCode"/>
+    </event>
+    <event name="sales_quote_add_item">
+        <observer name="resend_promocode_add" instance="Tirehub\TirePromo\Observer\ResendPromoCode"/>
+    </event>
+    <event name="controller_action_predispatch_twwcheckout_index_cartpost">
+        <observer name="delete_promo_code_on_empty_cart" instance="Tirehub\TirePromo\Observer\DeletePromoCodeOnEmptyCart" />
+    </event>
+</config>

@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="Tirehub_TirePromo::promo_code_log"
+                title="Promo Code Logs"
+                translate="title"
+                module="Tirehub_TirePromo"
+                sortOrder="70"
+                parent="Magento_Reports::report"
+                action="tirepromo/log/index"
+                resource="Tirehub_TirePromo::promo_code_log"/>
+    </menu>
+</config>

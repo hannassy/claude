@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="request_api_settings">
+            <group id="api_setting">
+                <field id="request_csspromocode_uri" type="text" translate="label" sortOrder="280" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>csspromocode URI</label>
+                    <depends>
+                        <field id="use_api">1</field>
+                    </depends>
+                </field>
+            </group>
+        </section>
+        <section id="tirehub_csspriceadjustment" translate="label" sortOrder="80" type="text" showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Css Price Adjustment Configuration</label>
+            <tab>silk</tab>
+            <resource>Tirehub_CssPriceAdjustment::cssconfig</resource>
+            <group id="general" sortOrder="100" type="text" showInDefault="1" showInWebsite="1" showInStore="1">
+                <field id="css_url" type="text" translate="label" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Css Support Page URL</label>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

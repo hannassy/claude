@@ -1,0 +1,26 @@
+{
+  "tirepromo_log": {
+    "column": {
+      "entity_id": true,
+      "promo_code": true,
+      "ship_to": true,
+      "sku": true,
+      "brand_pattern": true,
+      "qty": true,
+      "discount_total": true,
+      "order_id": true,
+      "quote_id": true,
+      "customer_id": true,
+      "created_at": true
+    },
+    "index": {
+      "TIREPROMO_LOG_PROMO_CODE": true,
+      "TIREPROMO_LOG_ORDER_ID": true,
+      "TIREPROMO_LOG_CUSTOMER_ID": true,
+      "TIREPROMO_LOG_CREATED_AT": true
+    },
+    "constraint": {
+      "PRIMARY": true
+    }
+  }
+}

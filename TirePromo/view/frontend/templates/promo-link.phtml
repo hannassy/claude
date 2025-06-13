@@ -1,0 +1,27 @@
+<?php /** @var \Tirehub\TirePromo\Block\Promo $block */ ?>
+
+<?php
+/**
+ * Top menu for store
+ *
+ * @var $block \Magento\Theme\Block\Html\Topmenu
+ */
+?>
+
+<li class="level0 nav-4 level-top ui-menu-item" id="promo-menu-item" v-cloak v-if="displayLink">
+    <a href="<?= $block->escapeUrl($block->getUrl("tirepromo")); ?>" class="level-top ui-corner-all">
+        <span><?= $block->escapeHtml(__('Promotions')) ?></span>
+    </a>
+</li>
+
+
+
+<script type="text/x-magento-init">
+    {
+        "#promo-menu-item": {
+            "Tirehub_TirePromo/js/promo-link": {
+                "customer_promo": <?= $block->getCustomerPromoItems(); ?>
+            }
+        }
+    }
+</script>

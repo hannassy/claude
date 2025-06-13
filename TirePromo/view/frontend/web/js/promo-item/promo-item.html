@@ -1,0 +1,50 @@
+<div class="promo-wrapper">
+    <div class="promo-discount-wrapper">
+        <div class="background-block "></div>
+        <div class="percent-wrapper" v-if="promo.percent">
+            <span class="discount-percent">{{ promo.percent }}%</span>
+            <span>{{ t('OFF') }}</span>
+            <span v-if="promo.isOrderLevel" class="discount-percent-text">{{ t('per order') }}</span>
+            <span v-else class="discount-percent-text">{{ t('per unit') }}</span>
+        </div>
+        <div class="value-wrapper" v-else>
+            <span class="discount-value">{{ promo.value }}</span>
+            <span class="discount-value-text">
+                <span>{{ t('OFF')}}</span>
+                <span v-if="promo.isOrderLevel">{{ t('per order') }}</span>
+                <span v-else>{{ t('per unit') }}</span>
+            </span>
+        </div>
+    </div>
+    <div class="promo-info">
+        <div class="promo-info-title">{{ promo.description }}</div>
+        <div class="promo-info-content">
+            <div class="promo-code-wrapper">
+                <div class="promo-code-block" data-role="promo-code" :data-copy-code="promo.name">
+                    <span class="promo-code-value">{{ promo.name }}</span>
+                    <span class="promo-code-copy">{{ t('Copy Code') }}</span>
+                    <span class="promo-code-copy copied">{{ t('Copied!') }}</span>
+                </div>
+                <div class="promo-info-description">{{ t('Apply at checkout.') }}</div>
+            </div>
+            <div :class="[{ 'full-wrapper': promo.isOrderLevel }, 'promo-ends-wrapper']">
+                <div class="promo-ends-block">
+                    {{ promoEndsMessage }} <strong>{{ promo.endDatePromo }}</strong>
+                </div>
+                <div class="promo-info-description" v-if="promo.min_qty || promo.max_qty">
+                    <span v-if="promo.min_qty"
+                          v-html=" t('Min: <strong>%min_qty</strong>', {min_qty: promo.min_qty})"></span>
+                    <span v-if="promo.max_qty"
+                          v-html=" t('Max: <strong>%max_qty</strong>', {max_qty: promo.max_qty})"></span>
+                </div>
+            </div>
+            <div class="promo-info-action" v-if="!promo.isOrderLevel">
+                <a :href="promo.search_url" class="primary-btn" v-on:click.prevent="showModal">
+                    <span>
+                        {{ t('Show Items') }}
+                    </span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
