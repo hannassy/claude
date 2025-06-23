@@ -5,14 +5,17 @@
             <label>Punchout</label>
             <tab>silk</tab>
             <resource>Tirehub_Punchout::punchout</resource>
-<!--            <group id="general" translate="label" type="text" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="1">-->
-<!--                <label>General Settings</label>-->
-<!--                <field id="enabled" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">-->
-<!--                    <label>Enable Punchout</label>-->
-<!--                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>-->
-<!--                    <comment>Enable or disable punchout functionality</comment>-->
-<!--                </field>-->
-<!--            </group>-->
+            <group id="general" translate="label" type="text" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>General Settings</label>
+                <field id="is_show_programs_menu" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Show Programs Menu</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="is_show_quotes_menu" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Show Quotes Menu</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+            </group>
             <group id="customer" translate="label" type="text" sortOrder="200" showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>Customer Settings</label>
                 <field id="email_template" translate="label comment" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">

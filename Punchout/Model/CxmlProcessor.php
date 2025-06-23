@@ -29,17 +29,13 @@ class CxmlProcessor
         }
 
         try {
-            // Log the first part of content for debugging (limit to avoid huge logs)
             $logContent = substr($content, 0, 500);
             $this->logger->info('Punchout: Processing XML content: ' . $logContent . (strlen($content) > 500 ? '...' : ''));
 
-            // Try to sanitize XML before parsing
             $content = $this->sanitizeXmlContent($content);
 
-            // Attempt to create SimpleXMLElement
             $xml = new SimpleXMLElement($content);
 
-            // Validate request
             $fromCredential = $xml->xpath('//Header/From/Credential');
             $toCredential = $xml->xpath('//Header/To/Credential');
             $senderCredential = $xml->xpath('//Header/Sender/Credential');
@@ -48,7 +44,6 @@ class CxmlProcessor
                 throw new LocalizedException(__('Invalid cXML request: Missing credentials'));
             }
 
-            // Extract credentials
             $fromDomain = (string)$fromCredential[0]['domain'];
             $fromIdentity = (string)$fromCredential[0]->Identity;
 
@@ -59,7 +54,6 @@ class CxmlProcessor
             $senderIdentity = (string)$senderCredential[0]->Identity;
             $senderSecret = (string)$senderCredential[0]->SharedSecret;
 
-            // Extract setup request data
             $setupRequest = $xml->Request->PunchOutSetupRequest;
             if (empty($setupRequest)) {
                 throw new LocalizedException(__('Invalid cXML request: Missing PunchOutSetupRequest'));
@@ -70,10 +64,8 @@ class CxmlProcessor
                 throw new LocalizedException(__('Invalid cXML request: Missing BuyerCookie'));
             }
 
-            // Check if this buyer cookie is already used with a different partner identity
             $this->validateBuyerCookieNotReused($buyerCookie, $senderIdentity);
 
-            // Extract extrinsic data
             $extrinsics = [];
             foreach ($setupRequest->Extrinsic as $extrinsic) {
                 $name = (string)$extrinsic['name'];
@@ -81,19 +73,16 @@ class CxmlProcessor
                 $extrinsics[$name] = $value;
             }
 
-            // Browser form post URL
             $browserFormPostUrl = '';
             if (isset($setupRequest->BrowserFormPost) && isset($setupRequest->BrowserFormPost->URL)) {
                 $browserFormPostUrl = (string)$setupRequest->BrowserFormPost->URL;
             }
 
-            // Ship to address
             $addressId = null;
             if (isset($setupRequest->ShipTo->Address)) {
                 $addressId = $this->extractAddressId($setupRequest->ShipTo->Address, $senderIdentity);
             }
 
-            // Return parsed data
             $result = [
                 'from' => [
                     'domain' => $fromDomain,
@@ -114,7 +103,6 @@ class CxmlProcessor
                 'address_id' => $addressId
             ];
 
-            // If debug mode is enabled, store the raw cXML request
             if ($this->config->isDebugMode()) {
                 $result['cxml_request'] = $content;
             }
@@ -129,25 +117,15 @@ class CxmlProcessor
         }
     }
 
-    /**
-     * Validate that the buyer cookie is not being reused with a different partner identity
-     *
-     * @param string $buyerCookie
-     * @param string $partnerIdentity
-     * @throws LocalizedException
-     */
     private function validateBuyerCookieNotReused(string $buyerCookie, string $partnerIdentity): void
     {
         try {
-            // Check if a session with this buyer cookie already exists
             $session = $this->sessionFactory->create();
             $session->load($buyerCookie, SessionInterface::BUYER_COOKIE);
 
-            // If session exists and has already been processed, reject the request
             if ($session->getId()) {
                 $sessionStatus = (int)$session->getData(SessionInterface::STATUS);
 
-                // If session is not in 'NEW' status, it's already been processed
                 if ($sessionStatus !== SessionInterface::STATUS_NEW) {
                     $this->logger->warning(
                         'Punchout: Attempt to reuse buyer cookie',
@@ -167,26 +145,20 @@ class CxmlProcessor
             throw $e;
         } catch (\Exception $e) {
             $this->logger->error('Punchout: Error validating buyer cookie: ' . $e->getMessage());
-            // Continue processing if there's an unexpected error checking the session
         }
     }
 
     private function sanitizeXmlContent(string $content): string
     {
-        // Remove UTF-8 BOM if present
         $bom = pack('H*', 'EFBBBF');
         $content = preg_replace("/^$bom/", '', $content);
 
-        // Remove any leading whitespace before XML declaration
         $content = preg_replace('/^[\s\r\n]+/', '', $content);
 
-        // Make sure XML declaration is at the beginning
         if (!preg_match('/^<\?xml/', $content)) {
-            // If no XML declaration, add one
-            if (strpos($content, '<?xml') === false) {
+            if (!str_contains($content, '<?xml')) {
                 $content = '<?xml version="1.0" encoding="UTF-8"?>' . $content;
-            } // If XML declaration exists but not at the beginning, move it
-            else {
+            } else {
                 preg_match('/<\?xml.*?\?>/', $content, $matches);
                 if (isset($matches[0])) {
                     $content = $matches[0] . str_replace($matches[0], '', $content);
@@ -194,7 +166,6 @@ class CxmlProcessor
             }
         }
 
-        // Replace invalid XML characters
         $content = preg_replace('/[^\x{0009}\x{000a}\x{000d}\x{0020}-\x{D7FF}\x{E000}-\x{FFFD}]+/u', '', $content);
 
         return $content;
@@ -221,11 +192,11 @@ class CxmlProcessor
         $responseXml->addAttribute('payloadID', $payloadId);
         $responseXml->addAttribute('timestamp', $timestamp);
 
-        $response = $responseXml->addChild('Response');
-        $status = $response->addChild('Status');
+        $status = $responseXml->addChild('Status');
         $status->addAttribute('code', '200');
         $status->addAttribute('text', 'success');
 
+        $response = $responseXml->addChild('Response');
         $punchoutSetupResponse = $response->addChild('PunchOutSetupResponse');
         $startPage = $punchoutSetupResponse->addChild('StartPage');
         $startPage->addChild('URL', $punchoutUrl);
@@ -243,8 +214,7 @@ class CxmlProcessor
         $responseXml->addAttribute('payloadID', $payloadId);
         $responseXml->addAttribute('timestamp', $timestamp);
 
-        $response = $responseXml->addChild('Response');
-        $status = $response->addChild('Status');
+        $status = $responseXml->addChild('Status');
         $status->addAttribute('code', $errorCode);
         $status->addAttribute('text', $errorMessage);
 

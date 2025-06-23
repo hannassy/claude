@@ -12,6 +12,16 @@ class Config
     ) {
     }
 
+    public function isShowProgramsMenu(): bool
+    {
+        return (bool)$this->scopeConfig->getValue('punchout/general/is_show_programs_menu');
+    }
+
+    public function isShowQuotesMenu(): bool
+    {
+        return (bool)$this->scopeConfig->getValue('punchout/general/is_show_quotes_menu');
+    }
+
     public function getCustomerEmailTemplate(): string
     {
         return (string)$this->scopeConfig->getValue('punchout/customer/email_template');

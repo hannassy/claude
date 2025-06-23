@@ -4,6 +4,8 @@
 		<punchout>
 			<general>
 				<enabled>1</enabled>
+				<is_show_programs_menu>0</is_show_programs_menu>
+				<is_show_quotes_menu>0</is_show_quotes_menu>
 			</general>
 			<customer>
 				<email_template>Punchout_shiptoID@tirehub.com</email_template>
