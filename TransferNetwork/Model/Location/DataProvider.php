@@ -35,26 +35,17 @@ class DataProvider extends AbstractDataProvider
 
         $this->loadedData = [];
 
-        $items = $this->collection->getItems();
-        foreach ($items as $location) {
-            $this->loadedData[$location->getId()] = $location->getData();
-        }
-
+        // Get location from registry (set by Edit controller)
         $location = $this->registry->registry('transfernetwork_location');
+
         if ($location && $location->getId()) {
+            // Editing existing location
             $this->loadedData[$location->getId()] = $location->getData();
-        } elseif ($location) {
-            // New location with default values
-            $this->loadedData[''] = $location->getData();
+        } else {
+            // New location - return empty array to show empty form
+            $this->loadedData = [];
         }
 
         return $this->loadedData;
-    }
-
-    public function getMeta(): array
-    {
-        $meta = parent::getMeta();
-
-        return $meta;
     }
 }

@@ -1,0 +1,84 @@
+<?php
+/**
+ * Simple upload form template
+ * Path: app/code/Tirehub/TransferNetwork/view/adminhtml/templates/location/upload.phtml
+ * @var \Magento\Framework\View\Element\Template $block
+ */
+?>
+<div class="admin__page-nav-bar">
+    <div class="admin__page-nav-title">
+        <h1 class="page-title"><?= __('Upload Locations from Excel') ?></h1>
+    </div>
+</div>
+
+<div class="admin__content">
+    <?php if ($block->getRequest()->getParam('success')): ?>
+        <div class="message message-success">
+            <?= __('Successfully imported %1 locations.', $block->getRequest()->getParam('count', 0)) ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($block->getRequest()->getParam('error')): ?>
+        <div class="message message-error">
+            <?= $block->escapeHtml($block->getRequest()->getParam('error')) ?>
+        </div>
+    <?php endif; ?>
+
+    <form action="<?= $block->getUrl('transfernetwork/location/upload') ?>"
+          method="post"
+          enctype="multipart/form-data"
+          id="upload_form">
+        <?= $block->getBlockHtml('formkey') ?>
+
+        <div class="admin__fieldset">
+            <div class="admin__legend">
+                <span><?= __('Upload Excel File') ?></span>
+            </div>
+
+            <div class="admin__field">
+                <label class="admin__field-label">
+                    <span><?= __('Select Excel File') ?></span>
+                </label>
+                <div class="admin__field-control">
+                    <input type="file"
+                           id="excel_file"
+                           name="excel_file"
+                           accept=".xlsx,.xls"
+                           class="admin__control-file"
+                           required>
+                    <div class="admin__field-note">
+                        <?= __('Supported formats: .xlsx, .xls') ?>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin__field">
+                <div class="admin__field-control">
+                    <button type="submit"
+                            class="action-primary">
+                        <?= __('Upload and Import') ?>
+                    </button>
+                    <a href="<?= $block->getUrl('transfernetwork/location') ?>"
+                       class="action-secondary">
+                        <?= __('Back to Locations') ?>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script type="text/javascript">
+    require(['jquery'], function($) {
+        $('#upload_form').on('submit', function() {
+            var fileInput = $('#excel_file')[0];
+            if (!fileInput.files[0]) {
+                alert('<?= __('Please select a file first.') ?>');
+                return false;
+            }
+
+            $('button[type="submit"]').text('<?= __('Uploading...') ?>').prop('disabled', true);
+            return true;
+        });
+    });
+</script>

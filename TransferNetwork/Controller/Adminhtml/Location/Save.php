@@ -5,6 +5,7 @@ namespace Tirehub\TransferNetwork\Controller\Adminhtml\Location;
 
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
+use Magento\Framework\App\Request\DataPersistorInterface;
 use Tirehub\TransferNetwork\Model\LocationFactory;
 use Tirehub\TransferNetwork\Model\ResourceModel\Location as LocationResource;
 
@@ -14,15 +15,18 @@ class Save extends Action
 
     protected $locationFactory;
     protected $locationResource;
+    protected $dataPersistor;
 
     public function __construct(
         Context $context,
         LocationFactory $locationFactory,
-        LocationResource $locationResource
+        LocationResource $locationResource,
+        DataPersistorInterface $dataPersistor
     ) {
         parent::__construct($context);
         $this->locationFactory = $locationFactory;
         $this->locationResource = $locationResource;
+        $this->dataPersistor = $dataPersistor;
     }
 
     public function execute()
@@ -47,15 +51,17 @@ class Save extends Action
             try {
                 $this->locationResource->save($model);
                 $this->messageManager->addSuccessMessage(__('You saved the location.'));
+                $this->dataPersistor->clear('transfernetwork_location');
 
                 if ($this->getRequest()->getParam('back')) {
                     return $resultRedirect->setPath('*/*/edit', ['location_id' => $model->getId()]);
                 }
                 return $resultRedirect->setPath('*/*/');
             } catch (\Exception $e) {
-                $this->messageManager->addErrorMessage($e->getMessage());
+                $this->messageManager->addExceptionMessage($e, __('Something went wrong while saving the location.'));
             }
 
+            $this->dataPersistor->set('transfernetwork_location', $data);
             return $resultRedirect->setPath('*/*/edit', ['location_id' => $this->getRequest()->getParam('location_id')]);
         }
 

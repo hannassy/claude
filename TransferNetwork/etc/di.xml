@@ -4,11 +4,13 @@
     <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
         <arguments>
             <argument name="collections" xsi:type="array">
-                <item name="transfernetwork_location_listing_data_source" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\Location\Grid\Collection</item>
+                <item name="transfernetwork_location_listing_data_source" xsi:type="string">transfernetwork_location_listing_collection</item>
             </argument>
         </arguments>
     </type>
-    <virtualType name="Tirehub\TransferNetwork\Model\ResourceModel\Location\Grid\Collection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
+
+    <!-- Listing Collection -->
+    <virtualType name="transfernetwork_location_listing_collection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
         <arguments>
             <argument name="mainTable" xsi:type="string">tirehub_transfernetwork_location</argument>
             <argument name="resourceModel" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\Location</argument>

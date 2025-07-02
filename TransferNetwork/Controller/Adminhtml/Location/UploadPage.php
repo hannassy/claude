@@ -7,7 +7,7 @@ use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
 use Magento\Framework\View\Result\PageFactory;
 
-class NewAction extends Action
+class UploadPage extends Action
 {
     const ADMIN_RESOURCE = 'Tirehub_TransferNetwork::location';
 
@@ -23,17 +23,10 @@ class NewAction extends Action
 
     public function execute()
     {
-        // Debug logging
-        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/location_debug.log');
-        $logger = new \Zend_Log();
-        $logger->addWriter($writer);
-        $logger->info('NewAction::execute() called');
-
         $resultPage = $this->resultPageFactory->create();
         $resultPage->setActiveMenu('Tirehub_TransferNetwork::locations');
-        $resultPage->getConfig()->getTitle()->prepend(__('New Location'));
+        $resultPage->getConfig()->getTitle()->prepend(__('Upload Locations'));
 
-        $logger->info('NewAction::execute() completed');
         return $resultPage;
     }
 }

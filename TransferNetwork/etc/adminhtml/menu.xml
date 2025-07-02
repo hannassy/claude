@@ -14,5 +14,12 @@
                 parent="Tirehub_TransferNetwork::transfernetwork"
                 action="transfernetwork/location"
                 resource="Tirehub_TransferNetwork::location"/>
+        <add id="Tirehub_TransferNetwork::upload"
+                title="Upload Locations"
+                module="Tirehub_TransferNetwork"
+                sortOrder="20"
+                parent="Tirehub_TransferNetwork::transfernetwork"
+                action="transfernetwork/location/uploadPage"
+                resource="Tirehub_TransferNetwork::location"/>
     </menu>
 </config>
