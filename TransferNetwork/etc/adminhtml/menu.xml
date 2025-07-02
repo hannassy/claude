@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="Tirehub_TransferNetwork::transfernetwork"
+                title="Transfer Network"
+                module="Tirehub_TransferNetwork"
+                sortOrder="100"
+                resource="Tirehub_TransferNetwork::transfernetwork"/>
+        <add id="Tirehub_TransferNetwork::locations"
+                title="Locations"
+                module="Tirehub_TransferNetwork"
+                sortOrder="10"
+                parent="Tirehub_TransferNetwork::transfernetwork"
+                action="transfernetwork/location"
+                resource="Tirehub_TransferNetwork::location"/>
+    </menu>
+</config>
