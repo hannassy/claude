@@ -1,25 +1,19 @@
 <?xml version="1.0"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <!-- Data Provider for UI Components -->
     <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
         <arguments>
             <argument name="collections" xsi:type="array">
-                <item name="transfernetwork_location_listing_data_source" xsi:type="string">transfernetwork_location_listing_collection</item>
-                <item name="location_form_data_source" xsi:type="string">transfernetwork_location_form_collection</item>
+                <item name="transfernetwork_location_listing_data_source" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\Location\Grid\Collection</item>
+                <item name="location_form_data_source" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\Location\Collection</item>
             </argument>
         </arguments>
     </type>
 
-    <!-- Listing Collection -->
-    <virtualType name="transfernetwork_location_listing_collection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
-        <arguments>
-            <argument name="mainTable" xsi:type="string">tirehub_transfernetwork_location</argument>
-            <argument name="resourceModel" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\Location</argument>
-        </arguments>
-    </virtualType>
-
-    <!-- Form Collection -->
-    <virtualType name="transfernetwork_location_form_collection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
+    <!-- Grid Collection for Listing -->
+    <virtualType name="Tirehub\TransferNetwork\Model\ResourceModel\Location\Grid\Collection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
         <arguments>
             <argument name="mainTable" xsi:type="string">tirehub_transfernetwork_location</argument>
             <argument name="resourceModel" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\Location</argument>
