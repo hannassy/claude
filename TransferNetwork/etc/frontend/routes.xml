@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!--
+Path: app/code/Tirehub/TransferNetwork/etc/frontend/routes.xml
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:App/etc/routes.xsd">
+    <router id="standard">
+        <route id="transfernetwork" frontName="transfernetwork">
+            <module name="Tirehub_TransferNetwork"/>
+        </route>
+    </router>
+</config>
