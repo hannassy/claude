@@ -1,7 +1,5 @@
 <?php
-/**
- * Path: app/code/Tirehub/TransferNetwork/Model/ResourceModel/Location.php
- */
+declare(strict_types=1);
 
 namespace Tirehub\TransferNetwork\Model\ResourceModel;
 
@@ -11,6 +9,6 @@ class Location extends AbstractDb
 {
     protected function _construct()
     {
-        $this->_init('tirehub_transfernetwork_location', 'location_id');
+        $this->_init('tirehub_transfernetwork_location', 'entity_id');
     }
 }

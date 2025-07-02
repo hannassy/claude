@@ -22,15 +22,15 @@
     <dataSource name="transfernetwork_location_listing_data_source" component="Magento_Ui/js/grid/provider">
         <settings>
             <storageConfig>
-                <param name="indexField" xsi:type="string">location_id</param>
+                <param name="indexField" xsi:type="string">entity_id</param>
             </storageConfig>
             <updateUrl path="mui/index/render"/>
         </settings>
         <aclResource>Tirehub_TransferNetwork::location</aclResource>
         <dataProvider class="Magento\Framework\View\Element\UiComponent\DataProvider\DataProvider" name="transfernetwork_location_listing_data_source">
             <settings>
-                <requestFieldName>location_id</requestFieldName>
-                <primaryFieldName>location_id</primaryFieldName>
+                <requestFieldName>entity_id</requestFieldName>
+                <primaryFieldName>entity_id</primaryFieldName>
             </settings>
         </dataProvider>
     </dataSource>
@@ -64,7 +64,7 @@
                     <item name="saveUrl" xsi:type="url" path="transfernetwork/location/inlineEdit"/>
                     <item name="validateBeforeSave" xsi:type="boolean">false</item>
                 </param>
-                <param name="indexField" xsi:type="string">location_id</param>
+                <param name="indexField" xsi:type="string">entity_id</param>
                 <param name="enabled" xsi:type="boolean">true</param>
                 <param name="selectProvider" xsi:type="string">transfernetwork_location_listing.transfernetwork_location_listing.transfernetwork_location_columns.ids</param>
             </editorConfig>
@@ -81,13 +81,20 @@
         </settings>
         <selectionsColumn name="ids">
             <settings>
-                <indexField>location_id</indexField>
+                <indexField>entity_id</indexField>
             </settings>
         </selectionsColumn>
+        <column name="entity_id">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Entity ID</label>
+                <sorting>asc</sorting>
+            </settings>
+        </column>
         <column name="location_id">
             <settings>
                 <filter>textRange</filter>
-                <label translate="true">ID</label>
+                <label translate="true">Location ID</label>
                 <sorting>asc</sorting>
             </settings>
         </column>
@@ -185,7 +192,7 @@
         </column>
         <actionsColumn name="actions" class="Tirehub\TransferNetwork\Ui\Component\Listing\Column\LocationActions">
             <settings>
-                <indexField>location_id</indexField>
+                <indexField>entity_id</indexField>
             </settings>
         </actionsColumn>
     </columns>

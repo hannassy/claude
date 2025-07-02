@@ -3,7 +3,8 @@
         xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
 
     <table name="tirehub_transfernetwork_location" resource="default" engine="innodb" comment="Transfer Network Locations">
-        <column xsi:type="int" name="location_id" padding="10" unsigned="true" nullable="false" identity="true" comment="Location ID"/>
+        <column xsi:type="int" name="entity_id" padding="10" unsigned="true" nullable="false" identity="true" comment="Entity ID"/>
+        <column xsi:type="int" name="location_id" padding="10" unsigned="true" nullable="false" comment="Location ID"/>
         <column xsi:type="varchar" name="location_name" nullable="false" length="255" comment="Location Name"/>
         <column xsi:type="decimal" name="latitude" scale="8" precision="11" nullable="false" comment="Latitude"/>
         <column xsi:type="decimal" name="longitude" scale="8" precision="11" nullable="false" comment="Longitude"/>
@@ -14,6 +15,9 @@
         <column xsi:type="timestamp" name="created_at" on_update="false" nullable="false" default="CURRENT_TIMESTAMP" comment="Created At"/>
         <column xsi:type="timestamp" name="updated_at" on_update="true" nullable="false" default="CURRENT_TIMESTAMP" comment="Updated At"/>
         <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="entity_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="TIREHUB_TRANSFERNETWORK_LOCATION_ID_UNIQUE">
             <column name="location_id"/>
         </constraint>
         <index referenceId="TIREHUB_TRANSFERNETWORK_LOCATION_NAME" indexType="btree">

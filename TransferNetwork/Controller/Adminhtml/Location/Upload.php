@@ -88,6 +88,13 @@ class Upload extends Action
 
     private function processExcelFile(string $filePath): int
     {
+        // Add debug logging
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/upload_debug.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+
+        $logger->info('Starting Excel processing: ' . $filePath);
+
         $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReader('Xlsx');
         $reader->setReadDataOnly(true);
         $spreadsheet = $reader->load($filePath);
@@ -95,6 +102,8 @@ class Upload extends Action
 
         $importedCount = 0;
         $highestRow = $worksheet->getHighestRow();
+
+        $logger->info('Highest row: ' . $highestRow);
 
         // Skip header row, start from row 2
         for ($row = 2; $row <= $highestRow; $row++) {
@@ -107,8 +116,11 @@ class Upload extends Action
             $active = $worksheet->getCell('G' . $row)->getValue();
             $rdcInventoryVisible = $worksheet->getCell('H' . $row)->getValue();
 
+            $logger->info("Row $row: ID=$locationId, Name=$locationName, Lat=$latitude, Lng=$longitude");
+
             // Skip empty rows
             if (empty($locationId) || empty($locationName)) {
+                $logger->info("Skipping empty row $row");
                 continue;
             }
 
@@ -124,25 +136,44 @@ class Upload extends Action
             $rdcCluster = $rdcCluster ? (string)$rdcCluster : '';
             $pinColor = $pinColor ? (string)$pinColor : '';
 
-            // Create or update location
-            $location = $this->locationFactory->create();
-            $this->locationResource->load($location, $locationId);
+            $logger->info("Processing location: $locationId - $locationName");
 
-            $location->setData([
-                'location_id' => $locationId,
-                'location_name' => (string)$locationName,
-                'latitude' => (float)$latitude,
-                'longitude' => (float)$longitude,
-                'rdc_cluster' => $rdcCluster,
-                'pin_color' => $pinColor,
-                'active' => $active,
-                'rdc_inventory_visible' => $rdcInventoryVisible
-            ]);
+            try {
+                // Check if location exists by location_id (not entity_id)
+                $collection = $this->locationFactory->create()->getCollection();
+                $collection->addFieldToFilter('location_id', $locationId);
 
-            $this->locationResource->save($location);
-            $importedCount++;
+                if ($collection->getSize() > 0) {
+                    // Location exists, update it
+                    $location = $collection->getFirstItem();
+                    $logger->info("Updating existing location: $locationId");
+                } else {
+                    // Location doesn't exist, create new one
+                    $location = $this->locationFactory->create();
+                    $logger->info("Creating new location: $locationId");
+                }
+
+                $location->setData([
+                    'location_id' => $locationId,
+                    'location_name' => (string)$locationName,
+                    'latitude' => (float)$latitude,
+                    'longitude' => (float)$longitude,
+                    'rdc_cluster' => $rdcCluster,
+                    'pin_color' => $pinColor,
+                    'active' => $active,
+                    'rdc_inventory_visible' => $rdcInventoryVisible
+                ]);
+
+                $this->locationResource->save($location);
+                $logger->info("Saved location: $locationId");
+                $importedCount++;
+
+            } catch (\Exception $e) {
+                $logger->err("Error saving location $locationId: " . $e->getMessage());
+            }
         }
 
+        $logger->info("Total imported: $importedCount");
         return $importedCount;
     }
 
