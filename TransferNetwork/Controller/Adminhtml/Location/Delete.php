@@ -28,7 +28,7 @@ class Delete extends Action
     public function execute()
     {
         $resultRedirect = $this->resultRedirectFactory->create();
-        $id = $this->getRequest()->getParam('location_id');
+        $id = $this->getRequest()->getParam('entity_id');
 
         if ($id) {
             try {
@@ -39,7 +39,7 @@ class Delete extends Action
                 return $resultRedirect->setPath('*/*/');
             } catch (\Exception $e) {
                 $this->messageManager->addErrorMessage($e->getMessage());
-                return $resultRedirect->setPath('*/*/edit', ['location_id' => $id]);
+                return $resultRedirect->setPath('*/*/edit', ['entity_id' => $id]);
             }
         }
 

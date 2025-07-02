@@ -5,12 +5,21 @@
         <arguments>
             <argument name="collections" xsi:type="array">
                 <item name="transfernetwork_location_listing_data_source" xsi:type="string">transfernetwork_location_listing_collection</item>
+                <item name="location_form_data_source" xsi:type="string">transfernetwork_location_form_collection</item>
             </argument>
         </arguments>
     </type>
 
     <!-- Listing Collection -->
     <virtualType name="transfernetwork_location_listing_collection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">tirehub_transfernetwork_location</argument>
+            <argument name="resourceModel" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\Location</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Form Collection -->
+    <virtualType name="transfernetwork_location_form_collection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
         <arguments>
             <argument name="mainTable" xsi:type="string">tirehub_transfernetwork_location</argument>
             <argument name="resourceModel" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\Location</argument>

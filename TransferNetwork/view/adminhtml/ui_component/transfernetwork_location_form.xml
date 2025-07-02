@@ -4,6 +4,7 @@
     <argument name="data" xsi:type="array">
         <item name="js_config" xsi:type="array">
             <item name="provider" xsi:type="string">transfernetwork_location_form.location_form_data_source</item>
+            <item name="component" xsi:type="string">uiComponent</item>
         </item>
         <item name="label" xsi:type="string" translate="true">Location Information</item>
     </argument>
@@ -18,9 +19,6 @@
         </buttons>
         <namespace>transfernetwork_location_form</namespace>
         <dataScope>data</dataScope>
-        <deps>
-            <dep>transfernetwork_location_form.location_form_data_source</dep>
-        </deps>
     </settings>
     <dataSource name="location_form_data_source">
         <argument name="data" xsi:type="array">
@@ -33,8 +31,8 @@
         </settings>
         <dataProvider class="Tirehub\TransferNetwork\Model\Location\DataProvider" name="location_form_data_source">
             <settings>
-                <requestFieldName>location_id</requestFieldName>
-                <primaryFieldName>location_id</primaryFieldName>
+                <requestFieldName>entity_id</requestFieldName>
+                <primaryFieldName>entity_id</primaryFieldName>
             </settings>
         </dataProvider>
     </dataSource>
@@ -42,11 +40,15 @@
         <settings>
             <label translate="true">General Information</label>
         </settings>
+        <field name="entity_id" formElement="input">
+            <settings>
+                <dataType>text</dataType>
+                <visible>false</visible>
+                <dataScope>entity_id</dataScope>
+            </settings>
+        </field>
         <field name="location_name" formElement="input">
             <settings>
-                <validation>
-                    <rule name="required-entry" xsi:type="boolean">true</rule>
-                </validation>
                 <dataType>text</dataType>
                 <label translate="true">Location Name</label>
                 <dataScope>location_name</dataScope>
@@ -54,10 +56,6 @@
         </field>
         <field name="latitude" formElement="input">
             <settings>
-                <validation>
-                    <rule name="required-entry" xsi:type="boolean">true</rule>
-                    <rule name="validate-number" xsi:type="boolean">true</rule>
-                </validation>
                 <dataType>text</dataType>
                 <label translate="true">Latitude</label>
                 <dataScope>latitude</dataScope>
@@ -65,74 +63,10 @@
         </field>
         <field name="longitude" formElement="input">
             <settings>
-                <validation>
-                    <rule name="required-entry" xsi:type="boolean">true</rule>
-                    <rule name="validate-number" xsi:type="boolean">true</rule>
-                </validation>
                 <dataType>text</dataType>
                 <label translate="true">Longitude</label>
                 <dataScope>longitude</dataScope>
             </settings>
-        </field>
-        <field name="rdc_cluster" formElement="input">
-            <settings>
-                <dataType>text</dataType>
-                <label translate="true">RDC Cluster</label>
-                <dataScope>rdc_cluster</dataScope>
-            </settings>
-        </field>
-        <field name="pin_color" formElement="input">
-            <settings>
-                <dataType>text</dataType>
-                <label translate="true">Pin Color</label>
-                <dataScope>pin_color</dataScope>
-            </settings>
-        </field>
-        <field name="active" formElement="checkbox">
-            <argument name="data" xsi:type="array">
-                <item name="config" xsi:type="array">
-                    <item name="default" xsi:type="number">1</item>
-                </item>
-            </argument>
-            <settings>
-                <dataType>boolean</dataType>
-                <label translate="true">Active</label>
-                <dataScope>active</dataScope>
-            </settings>
-            <formElements>
-                <checkbox>
-                    <settings>
-                        <valueMap>
-                            <map name="false" xsi:type="number">0</map>
-                            <map name="true" xsi:type="number">1</map>
-                        </valueMap>
-                        <prefer>toggle</prefer>
-                    </settings>
-                </checkbox>
-            </formElements>
-        </field>
-        <field name="rdc_inventory_visible" formElement="checkbox">
-            <argument name="data" xsi:type="array">
-                <item name="config" xsi:type="array">
-                    <item name="default" xsi:type="number">0</item>
-                </item>
-            </argument>
-            <settings>
-                <dataType>boolean</dataType>
-                <label translate="true">RDC Inventory Visible</label>
-                <dataScope>rdc_inventory_visible</dataScope>
-            </settings>
-            <formElements>
-                <checkbox>
-                    <settings>
-                        <valueMap>
-                            <map name="false" xsi:type="number">0</map>
-                            <map name="true" xsi:type="number">1</map>
-                        </valueMap>
-                        <prefer>toggle</prefer>
-                    </settings>
-                </checkbox>
-            </formElements>
         </field>
     </fieldset>
 </form>

@@ -30,13 +30,13 @@ class LocationActions extends Column
     {
         if (isset($dataSource['data']['items'])) {
             foreach ($dataSource['data']['items'] as & $item) {
-                if (isset($item['location_id'])) {
+                if (isset($item['entity_id'])) {
                     $item[$this->getData('name')] = [
                         'edit' => [
                             'href' => $this->urlBuilder->getUrl(
                                 static::URL_PATH_EDIT,
                                 [
-                                    'location_id' => $item['location_id']
+                                    'entity_id' => $item['entity_id']
                                 ]
                             ),
                             'label' => __('Edit')
@@ -45,7 +45,7 @@ class LocationActions extends Column
                             'href' => $this->urlBuilder->getUrl(
                                 static::URL_PATH_DELETE,
                                 [
-                                    'location_id' => $item['location_id']
+                                    'entity_id' => $item['entity_id']
                                 ]
                             ),
                             'label' => __('Delete'),

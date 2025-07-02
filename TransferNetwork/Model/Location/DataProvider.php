@@ -29,7 +29,15 @@ class DataProvider extends AbstractDataProvider
 
     public function getData(): array
     {
+        // Debug logging
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/location_debug.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+
+        $logger->info('DataProvider::getData() called');
+
         if (isset($this->loadedData)) {
+            $logger->info('Returning cached data: ' . json_encode($this->loadedData));
             return $this->loadedData;
         }
 
@@ -40,12 +48,44 @@ class DataProvider extends AbstractDataProvider
 
         if ($location && $location->getId()) {
             // Editing existing location
-            $this->loadedData[$location->getId()] = $location->getData();
+            $logger->info('Found location in registry with ID: ' . $location->getId());
+            $locationData = $location->getData();
+
+            // Ensure data is properly formatted for the form
+            $formData = [
+                'entity_id' => $location->getId(),
+                'location_id' => $location->getLocationId(),
+                'location_name' => $location->getLocationName(),
+                'latitude' => $location->getLatitude(),
+                'longitude' => $location->getLongitude(),
+                'rdc_cluster' => $location->getRdcCluster(),
+                'pin_color' => $location->getPinColor(),
+                'active' => $location->getActive() ? '1' : '0',
+                'rdc_inventory_visible' => $location->getRdcInventoryVisible() ? '1' : '0'
+            ];
+
+            $logger->info('Formatted form data: ' . json_encode($formData));
+            $this->loadedData[$location->getId()] = $formData;
         } else {
             // New location - return empty array to show empty form
+            $logger->info('No location in registry - new location form');
             $this->loadedData = [];
         }
 
+        $logger->info('Final loadedData count: ' . count($this->loadedData));
         return $this->loadedData;
+    }
+
+    public function getMeta(): array
+    {
+        $meta = parent::getMeta();
+
+        // Debug log meta
+        $writer = new \Zend_Log_Writer_Stream(BP . '/var/log/location_debug.log');
+        $logger = new \Zend_Log();
+        $logger->addWriter($writer);
+        $logger->info('DataProvider::getMeta() called');
+
+        return $meta;
     }
 }
