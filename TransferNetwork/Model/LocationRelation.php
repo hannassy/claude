@@ -1,7 +1,5 @@
 <?php
-/**
- * Path: app/code/Tirehub/TransferNetwork/Model/LocationRelation.php
- */
+declare(strict_types=1);
 
 namespace Tirehub\TransferNetwork\Model;
 
@@ -13,7 +11,6 @@ class LocationRelation extends AbstractModel implements IdentityInterface
     const CACHE_TAG = 'tirehub_transfernetwork_location_relation';
 
     protected $_cacheTag = 'tirehub_transfernetwork_location_relation';
-
     protected $_eventPrefix = 'tirehub_transfernetwork_location_relation';
 
     protected function _construct()
@@ -28,64 +25,58 @@ class LocationRelation extends AbstractModel implements IdentityInterface
 
     public function getDefaultValues()
     {
-        $values = [];
-        return $values;
+        return [
+            'active' => 1
+        ];
     }
 
-    /**
-     * Get Relation ID
-     * @return int|null
-     */
-    public function getRelationId()
+    public function getRelationId(): ?int
     {
-        return $this->getData('relation_id');
+        return $this->getData('relation_id') ? (int)$this->getData('relation_id') : null;
     }
 
-    /**
-     * Set Relation ID
-     * @param int $relationId
-     * @return $this
-     */
-    public function setRelationId($relationId)
+    public function setRelationId(int $relationId): self
     {
         return $this->setData('relation_id', $relationId);
     }
 
-    /**
-     * Get Location ID From
-     * @return int|null
-     */
-    public function getLocationIdFrom()
+    public function getLocationIdFrom(): ?int
     {
-        return $this->getData('location_id_from');
+        return $this->getData('location_id_from') ? (int)$this->getData('location_id_from') : null;
     }
 
-    /**
-     * Set Location ID From
-     * @param int $locationIdFrom
-     * @return $this
-     */
-    public function setLocationIdFrom($locationIdFrom)
+    public function setLocationIdFrom(int $locationIdFrom): self
     {
         return $this->setData('location_id_from', $locationIdFrom);
     }
 
-    /**
-     * Get Location ID To
-     * @return int|null
-     */
-    public function getLocationIdTo()
+    public function getLocationIdTo(): ?int
     {
-        return $this->getData('location_id_to');
+        return $this->getData('location_id_to') ? (int)$this->getData('location_id_to') : null;
     }
 
-    /**
-     * Set Location ID To
-     * @param int $locationIdTo
-     * @return $this
-     */
-    public function setLocationIdTo($locationIdTo)
+    public function setLocationIdTo(int $locationIdTo): self
     {
         return $this->setData('location_id_to', $locationIdTo);
+    }
+
+    public function getActive(): bool
+    {
+        return (bool)$this->getData('active');
+    }
+
+    public function setActive(bool $active): self
+    {
+        return $this->setData('active', $active);
+    }
+
+    public function getCutoffDays(): ?int
+    {
+        return $this->getData('cutoff_days') ? (int)$this->getData('cutoff_days') : null;
+    }
+
+    public function setCutoffDays(?int $cutoffDays): self
+    {
+        return $this->setData('cutoff_days', $cutoffDays);
     }
 }

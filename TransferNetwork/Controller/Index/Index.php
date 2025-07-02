@@ -1,7 +1,5 @@
 <?php
-/**
- * Path: app/code/Tirehub/TransferNetwork/Controller/Index/Index.php
- */
+declare(strict_types=1);
 
 namespace Tirehub\TransferNetwork\Controller\Index;
 

@@ -1,7 +1,5 @@
 <?php
-/**
- * Path: app/code/Tirehub/TransferNetwork/Controller/Ajax/Locations.php
- */
+declare(strict_types=1);
 
 namespace Tirehub\TransferNetwork\Controller\Ajax;
 
@@ -94,7 +92,6 @@ class Locations implements HttpGetActionInterface
                 'locations' => $locations,
                 'relations' => $relations
             ]);
-
         } catch (\Exception $e) {
             return $result->setData([
                 'success' => false,

@@ -35,7 +35,10 @@
         <column xsi:type="int" name="relation_id" padding="10" unsigned="true" nullable="false" identity="true" comment="Relation ID"/>
         <column xsi:type="int" name="location_id_from" padding="10" unsigned="true" nullable="false" comment="From Location ID"/>
         <column xsi:type="int" name="location_id_to" padding="10" unsigned="true" nullable="false" comment="To Location ID"/>
+        <column xsi:type="boolean" name="active" nullable="false" default="1" comment="Active Status"/>
+        <column xsi:type="int" name="cutoff_days" padding="10" unsigned="true" nullable="true" comment="Cutoff Days"/>
         <column xsi:type="timestamp" name="created_at" on_update="false" nullable="false" default="CURRENT_TIMESTAMP" comment="Created At"/>
+        <column xsi:type="timestamp" name="updated_at" on_update="true" nullable="false" default="CURRENT_TIMESTAMP" comment="Updated At"/>
         <constraint xsi:type="primary" referenceId="PRIMARY">
             <column name="relation_id"/>
         </constraint>
@@ -49,6 +52,12 @@
             <column name="location_id_from"/>
             <column name="location_id_to"/>
         </constraint>
+        <index referenceId="TIREHUB_TRANSFERNETWORK_RELATION_ACTIVE" indexType="btree">
+            <column name="active"/>
+        </index>
+        <index referenceId="TIREHUB_TRANSFERNETWORK_RELATION_CUTOFF_DAYS" indexType="btree">
+            <column name="cutoff_days"/>
+        </index>
     </table>
 
 </schema>

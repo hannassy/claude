@@ -14,6 +14,13 @@
                 parent="Tirehub_TransferNetwork::transfernetwork"
                 action="transfernetwork/location"
                 resource="Tirehub_TransferNetwork::location"/>
+        <add id="Tirehub_TransferNetwork::relations"
+                title="Relations"
+                module="Tirehub_TransferNetwork"
+                sortOrder="15"
+                parent="Tirehub_TransferNetwork::transfernetwork"
+                action="transfernetwork/relation"
+                resource="Tirehub_TransferNetwork::relation"/>
         <add id="Tirehub_TransferNetwork::upload"
                 title="Upload Locations"
                 module="Tirehub_TransferNetwork"

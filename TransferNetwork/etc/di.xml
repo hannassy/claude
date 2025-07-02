@@ -8,15 +8,25 @@
             <argument name="collections" xsi:type="array">
                 <item name="transfernetwork_location_listing_data_source" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\Location\Grid\Collection</item>
                 <item name="location_form_data_source" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\Location\Collection</item>
+                <item name="transfernetwork_relation_listing_data_source" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\LocationRelation\Grid\Collection</item>
+                <item name="relation_form_data_source" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\LocationRelation\Collection</item>
             </argument>
         </arguments>
     </type>
 
-    <!-- Grid Collection for Listing -->
+    <!-- Grid Collection for Location Listing -->
     <virtualType name="Tirehub\TransferNetwork\Model\ResourceModel\Location\Grid\Collection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
         <arguments>
             <argument name="mainTable" xsi:type="string">tirehub_transfernetwork_location</argument>
             <argument name="resourceModel" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\Location</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Grid Collection for Relation Listing -->
+    <virtualType name="Tirehub\TransferNetwork\Model\ResourceModel\LocationRelation\Grid\Collection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">tirehub_transfernetwork_location_relation</argument>
+            <argument name="resourceModel" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\LocationRelation</argument>
         </arguments>
     </virtualType>
 </config>

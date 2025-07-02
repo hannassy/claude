@@ -1,7 +1,5 @@
 <?php
-/**
- * Path: app/code/Tirehub/TransferNetwork/Model/ResourceModel/LocationRelation/Collection.php
- */
+declare(strict_types=1);
 
 namespace Tirehub\TransferNetwork\Model\ResourceModel\LocationRelation;
 
