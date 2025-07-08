@@ -76,20 +76,13 @@ class MapDataService
                 ->joinLocationDetails();
 
             foreach ($collection as $relation) {
+                $fromLocationId = (int)$relation->getLocationIdFrom();
+                $toLocationId = (int)$relation->getLocationIdTo();
+
                 $relations[] = [
-                    'from_location_id' => (int)$relation->getLocationIdFrom(),
-                    'to_location_id' => (int)$relation->getLocationIdTo(),
-                    'from_name' => $relation->getData('from_location_name'),
-                    'to_name' => $relation->getData('to_location_name'),
-                    'from_coordinates' => [
-                        'lat' => (float)$relation->getData('from_latitude'),
-                        'lng' => (float)$relation->getData('from_longitude')
-                    ],
-                    'to_coordinates' => [
-                        'lat' => (float)$relation->getData('to_latitude'),
-                        'lng' => (float)$relation->getData('to_longitude')
-                    ],
-                    'cutoff_days' => $relation->getCutoffDays() ? (int)$relation->getCutoffDays() : null
+                    'from' => $fromLocationId,
+                    'to' => $toLocationId,
+                    'type' => $this->determineRelationType($fromLocationId, $toLocationId)
                 ];
             }
         } catch (LocalizedException $e) {
@@ -97,6 +90,37 @@ class MapDataService
         }
 
         return $relations;
+    }
+
+    private function determineRelationType(int $fromLocationId, int $toLocationId): string
+    {
+        $fromLocation = $this->getLocationById($fromLocationId);
+        $toLocation = $this->getLocationById($toLocationId);
+
+        if (!$fromLocation || !$toLocation) {
+            return 'unknown';
+        }
+
+        $fromType = $fromLocation['type'] ?? 'TLC';
+        $toType = $toLocation['type'] ?? 'TLC';
+
+        if ($fromType === 'RDC' && $toType === 'TLC') {
+            return 'rdc-tlc';
+        }
+
+        if ($fromType === 'TLC' && $toType === 'RDC') {
+            return 'tlc-rdc';
+        }
+
+        if ($fromType === 'TLC' && $toType === 'TLC') {
+            return 'tlc-tlc';
+        }
+
+        if ($fromType === 'RDC' && $toType === 'RDC') {
+            return 'rdc-rdc';
+        }
+
+        return 'unknown';
     }
 
     private function determineCluster($location): string

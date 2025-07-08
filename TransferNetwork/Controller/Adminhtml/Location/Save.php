@@ -35,7 +35,7 @@ class Save extends Action
         $data = $this->getRequest()->getPostValue();
 
         if ($data) {
-            $id = $this->getRequest()->getParam('location_id');
+            $id = $this->getRequest()->getParam('entity_id');
             $model = $this->locationFactory->create();
 
             if ($id) {

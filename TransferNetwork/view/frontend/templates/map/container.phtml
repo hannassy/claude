@@ -3,7 +3,6 @@
  * @var \Tirehub\TransferNetwork\Block\Map $block
  */
 $items = $block->getItems();
-$googleMapsApiKey = $this->getGoogleMapsApiKey();
 ?>
 
 <div id="routes-map-container" class="routes-map-container" v-cloak></div>
@@ -18,8 +17,3 @@ $googleMapsApiKey = $this->getGoogleMapsApiKey();
             }, document.getElementById('routes-map-container'));
         });
 </script>
-
-<?php if ($googleMapsApiKey): ?>
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=<?= $block->escapeHtml($googleMapsApiKey) ?>&language=en&region=US&libraries=places"></script>
-<?php endif; ?>
-
