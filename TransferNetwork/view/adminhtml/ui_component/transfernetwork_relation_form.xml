@@ -21,16 +21,16 @@
             <dep>transfernetwork_relation_form.relation_form_data_source</dep>
         </deps>
     </settings>
-    <dataSource name="relation_form_data_source">
+    <dataSource name="transfernetwork_relation_form_data_source">
         <argument name="data" xsi:type="array">
             <item name="js_config" xsi:type="array">
                 <item name="component" xsi:type="string">Magento_Ui/js/form/provider</item>
             </item>
         </argument>
         <settings>
-            <submitUrl path="transfernetwork/relation/save"/>
+            <submitUrl path="*/*/save"/>
         </settings>
-        <dataProvider class="Tirehub\TransferNetwork\Model\LocationRelation\DataProvider" name="relation_form_data_source">
+        <dataProvider class="Tirehub\TransferNetwork\Model\LocationRelation\DataProvider" name="transfernetwork_relation_form_data_source">
             <settings>
                 <requestFieldName>relation_id</requestFieldName>
                 <primaryFieldName>relation_id</primaryFieldName>
@@ -134,6 +134,49 @@
                 <dataType>text</dataType>
                 <label translate="true">Cutoff Days</label>
                 <dataScope>cutoff_days</dataScope>
+            </settings>
+        </field>
+        <field name="cutoff_time" formElement="date">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="source" xsi:type="string">relation</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Cutoff Time</label>
+                <dataScope>cutoff_time</dataScope>
+                <additionalClasses>
+                    <class name="admin__field-date">true</class>
+                </additionalClasses>
+            </settings>
+            <formElements>
+                <date>
+                    <settings>
+                        <options>
+                            <option name="showsTime" xsi:type="boolean">true</option>
+                            <option name="timeOnly" xsi:type="boolean">true</option>
+                            <option name="timeFormat" xsi:type="string">HH:mm</option>
+                            <option name="dateFormat" xsi:type="string"></option>
+                        </options>
+                    </settings>
+                </date>
+            </formElements>
+        </field>
+        <field name="unload_minutes" formElement="input">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="source" xsi:type="string">relation</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>number</dataType>
+                <label translate="true">Unload Minutes</label>
+                <dataScope>unload_minutes</dataScope>
+                <validation>
+                    <rule name="validate-number" xsi:type="boolean">true</rule>
+                    <rule name="validate-zero-or-greater" xsi:type="boolean">true</rule>
+                </validation>
             </settings>
         </field>
     </fieldset>

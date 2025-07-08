@@ -4,13 +4,12 @@ declare(strict_types=1);
 namespace Tirehub\TransferNetwork\Model;
 
 use Magento\Framework\Model\AbstractModel;
-use Magento\Framework\DataObject\IdentityInterface;
 
-class LocationRelation extends AbstractModel implements IdentityInterface
+class LocationRelation extends AbstractModel
 {
     const CACHE_TAG = 'tirehub_transfernetwork_location_relation';
 
-    protected $_cacheTag = 'tirehub_transfernetwork_location_relation';
+    protected $_cacheTag = self::CACHE_TAG;
     protected $_eventPrefix = 'tirehub_transfernetwork_location_relation';
 
     protected function _construct()
@@ -18,26 +17,14 @@ class LocationRelation extends AbstractModel implements IdentityInterface
         $this->_init(\Tirehub\TransferNetwork\Model\ResourceModel\LocationRelation::class);
     }
 
-    public function getIdentities()
+    public function getIdentities(): array
     {
         return [self::CACHE_TAG . '_' . $this->getId()];
-    }
-
-    public function getDefaultValues()
-    {
-        return [
-            'active' => 1
-        ];
     }
 
     public function getRelationId(): ?int
     {
         return $this->getData('relation_id') ? (int)$this->getData('relation_id') : null;
-    }
-
-    public function setRelationId(int $relationId): self
-    {
-        return $this->setData('relation_id', $relationId);
     }
 
     public function getLocationIdFrom(): ?int
@@ -78,5 +65,57 @@ class LocationRelation extends AbstractModel implements IdentityInterface
     public function setCutoffDays(?int $cutoffDays): self
     {
         return $this->setData('cutoff_days', $cutoffDays);
+    }
+
+    public function getCutoffTime(): ?string
+    {
+        return $this->getData('cutoff_time');
+    }
+
+    public function setCutoffTime(?string $cutoffTime): self
+    {
+        if ($cutoffTime) {
+            // Handle various time formats
+            if (preg_match('/^\d{2}:\d{2}$/', $cutoffTime)) {
+                // HH:MM format
+                $cutoffTime = $cutoffTime . ':00';
+            } elseif (preg_match('/^\d{2}:\d{2}:\d{2}$/', $cutoffTime)) {
+                // Already in HH:MM:SS format
+            } else {
+                // Try to parse other formats
+                try {
+                    $time = new \DateTime($cutoffTime);
+                    $cutoffTime = $time->format('H:i:s');
+                } catch (\Exception $e) {
+                    $cutoffTime = null;
+                }
+            }
+        }
+        return $this->setData('cutoff_time', $cutoffTime);
+    }
+
+    public function getUnloadMinutes(): ?int
+    {
+        return $this->getData('unload_minutes') ? (int)$this->getData('unload_minutes') : null;
+    }
+
+    public function setUnloadMinutes(?int $unloadMinutes): self
+    {
+        return $this->setData('unload_minutes', $unloadMinutes);
+    }
+
+    public function getFormattedCutoffTime(): string
+    {
+        $time = $this->getCutoffTime();
+        if (!$time) {
+            return '';
+        }
+
+        try {
+            $dateTime = new \DateTime($time);
+            return $dateTime->format('g:i A');
+        } catch (\Exception $e) {
+            return $time;
+        }
     }
 }

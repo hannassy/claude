@@ -34,6 +34,9 @@ class MapDataService
         ];
     }
 
+    /**
+     * @throws LocalizedException
+     */
     public function getLocationData(): array
     {
         $locations = [];
@@ -51,6 +54,7 @@ class MapDataService
                     'lng' => (float)$location->getLongitude(),
                     'cluster' => $this->determineCluster($location),
                     'color' => $this->determineColor($location),
+                    'is_tirehub' => (int)$location->getIsTirehub()
                 ];
 
                 if ($this->isRdcLocation($location)) {

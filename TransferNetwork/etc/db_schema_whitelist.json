@@ -1,0 +1,51 @@
+{
+    "tirehub_transfernetwork_location": {
+        "column": {
+            "entity_id": true,
+            "location_id": true,
+            "location_name": true,
+            "latitude": true,
+            "longitude": true,
+            "rdc_cluster": true,
+            "pin_color": true,
+            "is_tirehub": true,
+            "active": true,
+            "rdc_inventory_visible": true,
+            "created_at": true,
+            "updated_at": true
+        },
+        "index": {
+            "TIREHUB_TRANSFERNETWORK_LOCATION_LOCATION_NAME": true,
+            "TIREHUB_TRANSFERNETWORK_LOCATION_ACTIVE": true,
+            "TIREHUB_TRANSFERNETWORK_LOCATION_RDC_CLUSTER": true,
+            "TIREHUB_TRANSFERNETWORK_LOCATION_IS_TIREHUB": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "TIREHUB_TRANSFERNETWORK_LOCATION_LOCATION_ID": true
+        }
+    },
+    "tirehub_transfernetwork_location_relation": {
+        "column": {
+            "relation_id": true,
+            "location_id_from": true,
+            "location_id_to": true,
+            "active": true,
+            "cutoff_days": true,
+            "cutoff_time": true,
+            "unload_minutes": true,
+            "created_at": true,
+            "updated_at": true
+        },
+        "index": {
+            "TIREHUB_TRANSFERNETWORK_LOCATION_RELATION_ACTIVE": true,
+            "TIREHUB_TRANSFERNETWORK_LOCATION_RELATION_CUTOFF_DAYS": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "FK_7E1C7B880D99FF27BA5626BD1AC3328E": true,
+            "FK_7607A1463C10CDC88CAAEF995DF9A25E": true,
+            "UNQ_210A623D3DDA9E9E8D6EFB1133ADBA4E": true
+        }
+    }
+}

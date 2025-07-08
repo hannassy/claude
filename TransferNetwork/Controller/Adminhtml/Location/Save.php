@@ -54,7 +54,7 @@ class Save extends Action
                 $this->dataPersistor->clear('transfernetwork_location');
 
                 if ($this->getRequest()->getParam('back')) {
-                    return $resultRedirect->setPath('*/*/edit', ['location_id' => $model->getId()]);
+                    return $resultRedirect->setPath('*/*/edit', ['entity_id' => $model->getId()]);
                 }
                 return $resultRedirect->setPath('*/*/');
             } catch (\Exception $e) {
@@ -62,7 +62,7 @@ class Save extends Action
             }
 
             $this->dataPersistor->set('transfernetwork_location', $data);
-            return $resultRedirect->setPath('*/*/edit', ['location_id' => $this->getRequest()->getParam('location_id')]);
+            return $resultRedirect->setPath('*/*/edit', ['entity_id' => $this->getRequest()->getParam('entity_id')]);
         }
 
         return $resultRedirect->setPath('*/*/');

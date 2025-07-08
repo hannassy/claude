@@ -4,14 +4,12 @@ declare(strict_types=1);
 namespace Tirehub\TransferNetwork\Model;
 
 use Magento\Framework\Model\AbstractModel;
-use Magento\Framework\DataObject\IdentityInterface;
 
-class Location extends AbstractModel implements IdentityInterface
+class Location extends AbstractModel
 {
     const CACHE_TAG = 'tirehub_transfernetwork_location';
 
-    protected $_cacheTag = 'tirehub_transfernetwork_location';
-
+    protected $_cacheTag = self::CACHE_TAG;
     protected $_eventPrefix = 'tirehub_transfernetwork_location';
 
     protected function _construct()
@@ -19,17 +17,9 @@ class Location extends AbstractModel implements IdentityInterface
         $this->_init(\Tirehub\TransferNetwork\Model\ResourceModel\Location::class);
     }
 
-    public function getIdentities()
+    public function getIdentities(): array
     {
         return [self::CACHE_TAG . '_' . $this->getId()];
-    }
-
-    public function getDefaultValues()
-    {
-        return [
-            'active' => 1,
-            'rdc_inventory_visible' => 0
-        ];
     }
 
     public function getLocationId(): ?int
@@ -90,6 +80,16 @@ class Location extends AbstractModel implements IdentityInterface
     public function setPinColor(?string $pinColor): self
     {
         return $this->setData('pin_color', $pinColor);
+    }
+
+    public function getIsTirehub(): bool
+    {
+        return (bool)$this->getData('is_tirehub');
+    }
+
+    public function setIsTirehub(bool $isTirehub): self
+    {
+        return $this->setData('is_tirehub', $isTirehub);
     }
 
     public function getActive(): bool
