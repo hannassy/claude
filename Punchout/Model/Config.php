@@ -36,4 +36,9 @@ class Config
     {
         return (bool)$this->scopeConfig->getValue('punchout/dev/process_item_redirect');
     }
+
+    public function isBuyerCookieValidationDisabled(): bool
+    {
+        return (bool)$this->scopeConfig->getValue('punchout/dev/disable_buyer_cookie_validation');
+    }
 }

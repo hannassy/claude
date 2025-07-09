@@ -15,6 +15,7 @@
 			<dev>
 				<is_debug_mode>1</is_debug_mode>
 				<process_item_redirect>1</process_item_redirect>
+				<disable_buyer_cookie_validation>0</disable_buyer_cookie_validation>
 			</dev>
 		</punchout>
 	</default>

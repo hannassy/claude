@@ -119,6 +119,17 @@ class CxmlProcessor
 
     private function validateBuyerCookieNotReused(string $buyerCookie, string $partnerIdentity): void
     {
+        if ($this->config->isBuyerCookieValidationDisabled()) {
+            $this->logger->warning(
+                'Punchout: Buyer cookie validation is DISABLED in config (testing mode)',
+                [
+                    'buyer_cookie' => $buyerCookie,
+                    'partner' => $partnerIdentity
+                ]
+            );
+            return;
+        }
+
         try {
             $session = $this->sessionFactory->create();
             $session->load($buyerCookie, SessionInterface::BUYER_COOKIE);
