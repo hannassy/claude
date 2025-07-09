@@ -32,7 +32,7 @@ class ExtractAddressId
             $partner = $this->getPartnerConfiguration($senderIdentity);
             if (!$partner) {
                 $this->logger->error("Punchout: Partner not found with identity: {$senderIdentity}");
-                throw new LocalizedException(__('Unable to find identity match!'));
+                throw new LocalizedException(__('Unable to find identity match!555'));
             }
 
             $formattedAddressId = $this->formatAddressId($addressId, $partner, $senderIdentity);
@@ -41,7 +41,7 @@ class ExtractAddressId
             $corpAddressId = $partner['corpAddressId'] ?? null;
             if (!$corpAddressId) {
                 $this->logger->error("Punchout: Missing corpAddressId for partner: {$senderIdentity}");
-                throw new LocalizedException(__('Unable to find identity match!'));
+                throw new LocalizedException(__('Unable to find identity match!666'));
             }
 
             $validDealerCode = $this->getValidDealerCode($formattedAddressId);

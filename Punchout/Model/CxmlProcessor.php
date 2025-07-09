@@ -192,11 +192,12 @@ class CxmlProcessor
         $responseXml->addAttribute('payloadID', $payloadId);
         $responseXml->addAttribute('timestamp', $timestamp);
 
-        $status = $responseXml->addChild('Status');
+        $response = $responseXml->addChild('Response');
+
+        $status = $response->addChild('Status');
         $status->addAttribute('code', '200');
         $status->addAttribute('text', 'success');
 
-        $response = $responseXml->addChild('Response');
         $punchoutSetupResponse = $response->addChild('PunchOutSetupResponse');
         $startPage = $punchoutSetupResponse->addChild('StartPage');
         $startPage->addChild('URL', $punchoutUrl);
@@ -214,7 +215,9 @@ class CxmlProcessor
         $responseXml->addAttribute('payloadID', $payloadId);
         $responseXml->addAttribute('timestamp', $timestamp);
 
-        $status = $responseXml->addChild('Status');
+        $response = $responseXml->addChild('Response');
+
+        $status = $response->addChild('Status');
         $status->addAttribute('code', $errorCode);
         $status->addAttribute('text', $errorMessage);
 
