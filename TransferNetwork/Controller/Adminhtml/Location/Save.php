@@ -50,6 +50,10 @@ class Save extends Action
 
             $model->setData($data);
 
+            if (!empty($data['icon'][0]['url'])) {
+                $model->setIcon($data['icon'][0]['url']);
+            }
+
             try {
                 $this->locationResource->save($model);
                 $this->messageManager->addSuccessMessage(__('You saved the location.'));

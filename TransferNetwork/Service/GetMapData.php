@@ -60,6 +60,7 @@ class GetMapData
                     'address' => $this->getLocationAddress($locationInfo),
                     'openingHours' => $this->getLocationOpeningHours($locationInfo),
                     'cutoff' => $this->getLocationCutOff($locationInfo),
+                    'icon' => $location->getIcon(),
                 ];
 
                 if ($this->isRdcLocation($location)) {

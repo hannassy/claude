@@ -231,5 +231,22 @@
                 </select>
             </formElements>
         </field>
+        <field name="icon" formElement="imageUploader">
+            <settings>
+                <label translate="true">Icon</label>
+                <componentType>imageUploader</componentType>
+            </settings>
+            <formElements>
+                <imageUploader>
+                    <settings>
+                        <allowedExtensions>jpg jpeg png</allowedExtensions>
+                        <maxFileSize>1097152</maxFileSize>
+                        <uploaderConfig>
+                            <param xsi:type="string" name="url">*/*/uploadIcon</param>
+                        </uploaderConfig>
+                    </settings>
+                </imageUploader>
+            </formElements>
+        </field>
     </fieldset>
 </form>

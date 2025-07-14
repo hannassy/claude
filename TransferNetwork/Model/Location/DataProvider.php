@@ -53,6 +53,19 @@ class DataProvider extends AbstractDataProvider
         $location = $this->registry->registry('transfernetwork_location');
 
         if ($location && $location->getId()) {
+
+            $itemData = $location->getData();
+            $itemData['icon'] = [];
+            $icon = $location->getData('icon');
+
+            if ($icon) {
+                $itemData['icon'] = [[
+                    'name' => basename($icon),
+                    'url' => $icon,
+                    'type' => 'image/' . pathinfo($icon, PATHINFO_EXTENSION),
+                ]];
+            }
+
             $this->loadedData[$location->getId()] = $location->getData();
         } else {
             // For new locations, try to load from collection if ID exists in request

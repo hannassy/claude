@@ -218,5 +218,10 @@
                 <indexField>entity_id</indexField>
             </settings>
         </actionsColumn>
+        <column name="icon">
+            <settings>
+                <label translate="true">Icon</label>
+            </settings>
+        </column>
     </columns>
 </listing>
