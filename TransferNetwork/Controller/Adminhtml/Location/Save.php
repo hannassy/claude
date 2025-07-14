@@ -44,6 +44,8 @@ class Save extends Action
                     $this->messageManager->addErrorMessage(__('This location no longer exists.'));
                     return $resultRedirect->setPath('*/*/');
                 }
+            } else {
+                unset($data['entity_id']);
             }
 
             $model->setData($data);

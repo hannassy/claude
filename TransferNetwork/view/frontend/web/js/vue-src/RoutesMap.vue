@@ -1,18 +1,56 @@
 <template>
     <div class="map-container">
-        <div class="loading" id="loading">
-            <div class="loading-spinner"></div>
+        <div v-if="loading" class="map-loading">
+            <div class="map-loading-spinner" />
             <p>Loading map...</p>
         </div>
 
-        <div id="map" ref="map"></div>
+        <div id="map" ref="map" />
+
+        <div class="map-legend">
+            <div class="map-legend-title">{{ t('Map Legend:') }}</div>
+
+            <div class="map-legend-list">
+                <div class="map-legend-list-column">
+                    <div class="map-legend-list-item rdc-inventory">
+                        {{ t('RDC to TLC with RDC Inventory Visibility') }}
+                    </div>
+                    <div class="map-legend-list-item rdc-replenishment">
+                        {{ t('RDC to TLC Replenishment Only') }}
+                    </div>
+                </div>
+                <div class="map-legend-list-column">
+                    <div class="map-legend-list-item tlc-transfer">
+                        {{ t('TLC to TLC Transfer') }}
+                    </div>
+                    <div class="map-legend-list-item port">
+                        {{ t('Inbound Outbound Port') }}
+                    </div>
+                    <div class="map-legend-list-item manufacturer">
+                        {{ t('Manufacturer DC') }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="map-legend-action">
+                <label class="checkbox-custom">
+                    <span class="checkbox-custom-label">
+                        {{ t('Show / Hide Non-TH Locations') }}
+                    </span>
+                    <input v-model="showNonThLocations" type="checkbox">
+                    <span class="checkbox-custom-checkmark checkbox-custom-checkmark-arrow" />
+                </label>
+            </div>
+        </div>
     </div>
 </template>
 
 <script>
+import _ from 'lodash';
+
 export default {
     props: {
-        locations: {
+        defaultLocations: {
             type: Array
         },
         routes: {
@@ -22,15 +60,44 @@ export default {
     data () {
         return {
             map: null,
+            loading: false,
             markers: {},
             polylines: [],
-            infoWindows: []
+            infoWindows: [],
+            directionsService: null,
+            routesProcessed: 0,
+            totalRoutes: 0,
+            showNonThLocations: true,
+            locations: []
         };
+    },
+    created () {
+        this.locations = _.map(this.defaultLocations, (location) => {
+            location.address = '814 44TH ST NW STE 102 AUBURN, WA98001-1754 253-856-1800';
+            location.openingHours = [
+                {
+                    weekDay: 'Monday - Friday',
+                    time: '07:30 AM - 05:00 PM'
+                },
+                {
+                    weekDay: 'Saturday',
+                    time: '07:30 AM - 01:00 PM'
+                }
+            ];
+            location.cutoff = {
+                transferToPrimary: 'From 134 Portland',
+                days: 1,
+                time: '04:00 PM'
+            };
+            return location;
+        });
     },
     mounted () {
         if (!(window && window.google && window.google.maps)) {
             return;
         }
+
+        this.loading = true;
 
         this.$nextTick(() => {
             var mapElement = this.$refs.map;
@@ -42,13 +109,12 @@ export default {
 
             // Draw all routes
             this.drawRoutes();
-
-            // Set up event listeners
-            // this.setupEventListeners();
-
-            // Hide loading
-            document.getElementById('loading').style.display = 'none';
         });
+    },
+    watch: {
+        showNonThLocations (visible) {
+            this.toggleHhLocations(visible);
+        }
     },
     methods: {
         initializeMap () {
@@ -62,6 +128,11 @@ export default {
                 fullscreenControl: false
 
             });
+
+            // Initialize Directions service if available
+            if (window.google && window.google.maps && window.google.maps.DirectionsService) {
+                this.directionsService = new google.maps.DirectionsService();
+            }
         },
         createMarkers () {
             this.locations.forEach(location => {
@@ -72,8 +143,9 @@ export default {
                     icon: this.getMarkerIcon(location)
                 });
 
-                // Store cluster info on marker
+                // Store custom info on marker
                 marker.cluster = location.cluster;
+                marker.isTirehub = location.isTirehub;
 
                 // Create info window
                 const infoWindow = new google.maps.InfoWindow({
@@ -117,21 +189,10 @@ export default {
                 break;
             }
 
-            if (location.type === 'RDC') {
-                return {
-                    path: google.maps.SymbolPath.CIRCLE,
-                    fillColor: fillColor,
-                    fillOpacity: 1,
-                    strokeColor: strokeColor,
-                    strokeWeight: 3,
-                    scale: scale
-                };
-            }
-
             return {
                 path: google.maps.SymbolPath.CIRCLE,
                 fillColor: fillColor,
-                fillOpacity: 0.9,
+                fillOpacity: 1,
                 strokeColor: strokeColor,
                 strokeWeight: 2,
                 scale: scale
@@ -141,44 +202,174 @@ export default {
         createInfoWindowContent (location) {
             return `
                 <div class="info-window">
-                    <h4>${location.name}</h4>
-                    <p><strong>ID:</strong> ${location.id}</p>
-                    <p><strong>Type:</strong> ${location.type || 'TLC'}</p>
-                    <p><strong>Cluster:</strong> ${location.cluster}</p>
-                    <p><strong>Coordinates:</strong> ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}</p>
+                    <div class="info-window-name">${location.name}</div>
+                    <div class="info-window-content">
+                        <div class="info-window-content-address">${location.address}</div>
+                        <div class="info-window-content-hours">
+                            <div class="hours-header">${this.t('Opening Hours:')}</div>
+                            ${location.openingHours.map(hours => `
+                                <div class="hours-row">
+                                    <span class="weekday">${hours.weekDay}</span>
+                                    <span class="time">${hours.time}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        ${location.cutoff ? `
+                            <div class="info-window-content-cutoff">
+                                <div class="cutoff-header">
+                                    <div>Transfer To Primary</div>
+                                    <div>Days</div>
+                                    <div>Cutoff</div>
+                                </div>
+                                <div class="cutoff-info">
+                                    <div class="cutoff-info-label">${location.cutoff.transferToPrimary}</div>
+                                    <div>${location.cutoff.days}</div>
+                                    <div>${location.cutoff.time}</div>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
                 </div>
             `;
         },
 
         drawRoutes () {
-            // Then draw location connections (orange/red thin lines)
-            this.routes.forEach(route => {
-                const fromLocation = this.locations.find(loc => loc.id === route.from);
-                const toLocation = this.locations.find(loc => loc.id === route.to);
+            if (!this.routes || this.routes.length === 0) {
+                this.loading = false;
+                return;
+            }
 
-                if (fromLocation && toLocation) {
-                    // For RDC connections, create curved paths that follow highways
-                    let path = [];
+            // Initialize route tracking
+            this.routesProcessed = 0;
+            this.totalRoutes = this.routes.length;
 
-                    path = [fromLocation, toLocation];
+            // Process routes sequentially to avoid rate limiting
+            this.processRoutesSequentially(0);
+        },
 
-                    const polyline = new google.maps.Polyline({
-                        path: path,
-                        geodesic: false,
-                        strokeColor: route.color,
-                        strokeOpacity: 0.7,
-                        strokeWeight: route.weight
-                    });
+        processRoutesSequentially (index) {
+            if (index >= this.routes.length) {
+                this.checkLoadingComplete();
+                return;
+            }
 
-                    // Store route info on polyline
-                    polyline.routeType = route.type;
-                    polyline.fromId = route.from;
-                    polyline.toId = route.to;
+            const route = this.routes[index];
+            const fromLocation = _.find(this.locations, ['id', route.from]);
+            const toLocation = _.find(this.locations, ['id', route.to]);
 
-                    polyline.setMap(this.map);
-                    this.polylines.push(polyline);
+            if (fromLocation && toLocation) {
+                this.drawSingleRoute(route, fromLocation, toLocation, () => {
+                    this.routesProcessed++;
+                    this.checkLoadingComplete();
+
+                    // Process next route after a small delay to avoid rate limiting
+                    setTimeout(() => {
+                        this.processRoutesSequentially(index + 1);
+                    }, 100);
+                });
+            } else {
+                // Skip to next route if locations not found
+                this.routesProcessed++;
+                this.checkLoadingComplete();
+                this.processRoutesSequentially(index + 1);
+            }
+        },
+
+        drawSingleRoute (route, fromLocation, toLocation, callback) {
+            // Try to use Directions API for realistic highway routes
+            if (this.directionsService) {
+                const request = {
+                    origin: { lat: fromLocation.lat, lng: fromLocation.lng },
+                    destination: { lat: toLocation.lat, lng: toLocation.lng },
+                    travelMode: google.maps.TravelMode.DRIVING,
+                    unitSystem: google.maps.UnitSystem.IMPERIAL,
+                    avoidHighways: false,
+                    avoidTolls: false
+                };
+
+                this.directionsService.route(request, (result, status) => {
+                    if (status === google.maps.DirectionsStatus.OK) {
+                        this.renderDirectionsRoute(result, route);
+                    } else {
+                        console.warn('Directions API failed for route', route.from, 'to', route.to, '- Status:', status);
+                        this.renderDirectRoute(route, fromLocation, toLocation);
+                    }
+                    callback();
+                });
+            } else {
+                // Fallback to direct route if Directions API not available
+                this.renderDirectRoute(route, fromLocation, toLocation);
+                callback();
+            }
+        },
+
+        renderDirectionsRoute (directionsResult, route) {
+            const path = directionsResult.routes[0].overview_path;
+
+            const polyline = new google.maps.Polyline({
+                path: path,
+                geodesic: false,
+                strokeColor: route.color,
+                strokeOpacity: 0.7,
+                strokeWeight: route.weight
+            });
+
+            // Store route info on polyline
+            polyline.routeType = route.type;
+            polyline.fromId = route.from;
+            polyline.toId = route.to;
+            polyline.isDirectionsRoute = true;
+
+            polyline.setMap(this.map);
+            this.polylines.push(polyline);
+        },
+
+        renderDirectRoute (route, fromLocation, toLocation) {
+            const path = [
+                { lat: fromLocation.lat, lng: fromLocation.lng },
+                { lat: toLocation.lat, lng: toLocation.lng }
+            ];
+
+            const polyline = new google.maps.Polyline({
+                path: path,
+                geodesic: false,
+                strokeColor: route.color,
+                strokeOpacity: 0.7,
+                strokeWeight: route.weight
+            });
+
+            // Store route info on polyline
+            polyline.routeType = route.type;
+            polyline.fromId = route.from;
+            polyline.toId = route.to;
+            polyline.isDirectionsRoute = false;
+
+            polyline.setMap(this.map);
+            this.polylines.push(polyline);
+        },
+
+        toggleHhLocations (visible) {
+            Object.values(this.markers).forEach(marker => {
+                if (!marker.isTirehub) {
+                    marker.setVisible(visible);
                 }
             });
+
+            // Also toggle related routes
+            this.polylines.forEach(polyline => {
+                const fromMarker = this.markers[polyline.fromId];
+                const toMarker = this.markers[polyline.toId];
+
+                if ((fromMarker && !fromMarker.isTirehub) || (toMarker && !toMarker.isTirehub)) {
+                    polyline.setVisible(visible);
+                }
+            });
+        },
+
+        checkLoadingComplete () {
+            if (this.routesProcessed >= this.totalRoutes) {
+                this.loading = false;
+            }
         }
     }
 };

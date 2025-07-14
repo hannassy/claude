@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Tirehub\TransferNetwork\Block;
 
 use Magento\Framework\View\Element\Template;
-use Tirehub\TransferNetwork\Service\MapDataService;
+use Tirehub\TransferNetwork\Service\GetMapData;
 use Magento\Framework\Serialize\SerializerInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Psr\Log\LoggerInterface;
@@ -13,7 +13,7 @@ class Map extends Template
 {
     public function __construct(
         Template\Context $context,
-        private readonly MapDataService $mapDataService,
+        private readonly GetMapData $getMapData,
         private readonly SerializerInterface $serializer,
         private readonly LoggerInterface $logger,
         array $data = []
@@ -24,11 +24,11 @@ class Map extends Template
     public function getItems(): string
     {
         try {
-            $result = $this->mapDataService->getMapData();
+            $result = $this->getMapData->execute();
             return $this->serializer->serialize($result);
         } catch (LocalizedException $e) {
             $this->logger->error('Error loading map data: ' . $e->getMessage());
-            return $this->serializer->serialize(['locations' => [], 'relations' => []]);
+            return $this->serializer->serialize([]);
         }
     }
 }
