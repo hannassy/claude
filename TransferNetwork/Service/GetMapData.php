@@ -69,8 +69,6 @@ class GetMapData
                 $locations[] = $locationData;
             }
         } catch (LocalizedException|Exception $e) {
-            var_dump($e->getMessage(), $location->getLocationId());
-            die;
             throw new LocalizedException(__('Unable to load location data: %1', $e->getMessage()));
         }
 
@@ -203,31 +201,16 @@ class GetMapData
             return '';
         }
 
-        //this.locations = _.map(this.defaultLocations, (location) => {
-        //location.address = '814 44TH ST NW STE 102 AUBURN, WA98001-1754 253-856-1800';
-        //    location.cutoff = {
-        //    transferToPrimary: 'From 134 Portland',
-        //        days: 1,
-        //        time: '04:00 PM'
-        //    };
-        //    return location;
-        //});
-
         $address = $locationsInfo['address'] ?? [];
         $street = $address['address1'] ?? '';
         $street .= ($address['address2'] ?? '') ? ', ' . $address['address2'] : '';
         $street .= ($address['address3'] ?? '') ? ', ' . $address['address3'] : '';
+        $street .= $address['city'] ?? '';
+        $street .= ', ' . $address['state'] ?? '';
+        $street .= ' ' . $address['postalCode'] ?? '';
+        $street .= ' ' . $address['phoneNumber'] ?? '';
 
         return $street;
-
-        //$result[] = [
-        //    'city' => $address['city'],
-        //    'address' => $street,
-        //    'county' => $address['city'] . ', ' . $address['state'] . ' ' . $address['postalCode'],
-        //    'telephone' => $address['phoneNumber'],
-        //    'open' => 'Open: ' . strtoupper($willCallOpen . " - " . $willCallClose) . ' M-F, ' . strtoupper($willCallOpenSaturday . " - " . $willCallCloseSaturday) . ' SAT',
-        //    'postcode' => $address['postalCode']
-        //];
     }
 
     private function getLocationOpeningHours(array $locationsInfo): array
