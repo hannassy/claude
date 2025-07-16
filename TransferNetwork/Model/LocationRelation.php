@@ -47,6 +47,16 @@ class LocationRelation extends AbstractModel
         return $this->setData('location_id_to', $locationIdTo);
     }
 
+    public function getColorId(): ?int
+    {
+        return $this->getData('color_id') ? (int)$this->getData('color_id') : null;
+    }
+
+    public function setColorId(?int $colorId): self
+    {
+        return $this->setData('color_id', $colorId);
+    }
+
     public function getActive(): bool
     {
         return (bool)$this->getData('active');
@@ -75,14 +85,10 @@ class LocationRelation extends AbstractModel
     public function setCutoffTime(?string $cutoffTime): self
     {
         if ($cutoffTime) {
-            // Handle various time formats
             if (preg_match('/^\d{2}:\d{2}$/', $cutoffTime)) {
-                // HH:MM format
                 $cutoffTime = $cutoffTime . ':00';
             } elseif (preg_match('/^\d{2}:\d{2}:\d{2}$/', $cutoffTime)) {
-                // Already in HH:MM:SS format
             } else {
-                // Try to parse other formats
                 try {
                     $time = new \DateTime($cutoffTime);
                     $cutoffTime = $time->format('H:i:s');

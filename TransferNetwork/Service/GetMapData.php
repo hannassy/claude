@@ -5,6 +5,7 @@ namespace Tirehub\TransferNetwork\Service;
 
 use Tirehub\TransferNetwork\Model\ResourceModel\Location\CollectionFactory as LocationCollectionFactory;
 use Tirehub\TransferNetwork\Model\ResourceModel\LocationRelation\CollectionFactory as RelationCollectionFactory;
+use Tirehub\TransferNetwork\Model\ResourceModel\Color\CollectionFactory as ColorCollectionFactory;
 use Magento\Framework\Exception\LocalizedException;
 use Tirehub\ApiMiddleware\Api\Request\GetLocationInfoInterface;
 use Tirehub\Customer\Api\ConvertToTimeInterface;
@@ -15,14 +16,12 @@ class GetMapData
     public function __construct(
         private readonly LocationCollectionFactory $locationCollectionFactory,
         private readonly RelationCollectionFactory $relationCollectionFactory,
+        private readonly ColorCollectionFactory $colorCollectionFactory,
         private readonly GetLocationInfoInterface $getLocationInfo,
         private readonly ConvertToTimeInterface $convertToTime
     ) {
     }
 
-    /**
-     * @throws LocalizedException
-     */
     public function execute(): array
     {
         return [
@@ -31,9 +30,6 @@ class GetMapData
         ];
     }
 
-    /**
-     * @throws LocalizedException
-     */
     public function getLocationData(): array
     {
         $locations = [];
@@ -41,6 +37,7 @@ class GetMapData
         try {
             $locationsInfo = $this->getLocationInfo->execute();
             $locationsInfo = $locationsInfo['locations'] ?? [];
+            $colors = $this->getColors();
 
             $collection = $this->locationCollectionFactory->create();
             $collection->addFieldToFilter('active', 1)
@@ -55,7 +52,7 @@ class GetMapData
                     'lat' => (float)$location->getLatitude(),
                     'lng' => (float)$location->getLongitude(),
                     'cluster' => $this->determineCluster($location),
-                    'color' => $location->getPinColor(),
+                    'color' => $this->getLocationColor($location->getColorId(), $colors),
                     'isTirehub' => (int)$location->getIsTirehub(),
                     'address' => $this->getLocationAddress($locationInfo),
                     'openingHours' => $this->getLocationOpeningHours($locationInfo),
@@ -81,6 +78,8 @@ class GetMapData
         $relations = [];
 
         try {
+            $colors = $this->getColors();
+
             $collection = $this->relationCollectionFactory->create();
             $collection->addFieldToFilter('main_table.active', 1)
                 ->joinLocationDetails();
@@ -88,18 +87,58 @@ class GetMapData
             foreach ($collection as $relation) {
                 $fromLocationId = (int)$relation->getLocationIdFrom();
                 $toLocationId = (int)$relation->getLocationIdTo();
+                $colorId = $relation->getColorId();
 
-                $relations[] = [
+                $relationData = [
                     'from' => $fromLocationId,
                     'to' => $toLocationId,
-                    'type' => $this->determineRelationType($fromLocationId, $toLocationId)
+                    'type' => $this->determineRelationType($fromLocationId, $toLocationId),
+                    'color' => $this->getRelationColor($colorId, $colors),
+                    'weight' => $this->getRelationWeight($colorId)
                 ];
+
+                $relations[] = $relationData;
             }
         } catch (LocalizedException $e) {
             throw new LocalizedException(__('Unable to load relation data: %1', $e->getMessage()));
         }
 
         return $relations;
+    }
+
+    private function getColors(): array
+    {
+        $colors = [];
+        $collection = $this->colorCollectionFactory->create();
+
+        foreach ($collection as $color) {
+            $colors[$color->getId()] = $color->getColorCode();
+        }
+
+        return $colors;
+    }
+
+    private function getLocationColor(?int $colorId, array $colors): string
+    {
+        if ($colorId && isset($colors[$colorId])) {
+            return $colors[$colorId];
+        }
+
+        return '#95A5A6';
+    }
+
+    private function getRelationColor(?int $colorId, array $colors): string
+    {
+        if ($colorId && isset($colors[$colorId])) {
+            return $colors[$colorId];
+        }
+
+        return '#ff6b35';
+    }
+
+    private function getRelationWeight(?int $colorId): int
+    {
+        return $colorId ? 4 : 2;
     }
 
     private function determineRelationType(int $fromLocationId, int $toLocationId): string
@@ -157,9 +196,6 @@ class GetMapData
         return $location->getRdcCluster() === 'RDC' || $location->getRdcInventoryVisible();
     }
 
-    /**
-     * @throws LocalizedException
-     */
     private function getLocationById(int $locationId): ?array
     {
         try {
@@ -173,13 +209,15 @@ class GetMapData
                 return null;
             }
 
+            $colors = $this->getColors();
+
             return [
                 'id' => (int)$location->getLocationId(),
                 'name' => $location->getLocationName(),
                 'lat' => (float)$location->getLatitude(),
                 'lng' => (float)$location->getLongitude(),
                 'cluster' => $this->determineCluster($location),
-                'color' => $location->getPinColor(),
+                'color' => $this->getLocationColor($location->getColorId(), $colors),
                 'type' => $this->isRdcLocation($location) ? 'RDC' : 'TLC'
             ];
         } catch (LocalizedException $e) {

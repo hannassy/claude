@@ -117,6 +117,25 @@
                 <label translate="true">To Location ID</label>
             </settings>
         </column>
+        <column name="relation_color_display" class="Tirehub\TransferNetwork\Ui\Component\Listing\Column\RelationColor">
+            <settings>
+                <label translate="true">Color</label>
+                <bodyTmpl>ui/grid/cells/html</bodyTmpl>
+                <sortable>false</sortable>
+            </settings>
+        </column>
+        <column name="color_id" component="Magento_Ui/js/grid/columns/select">
+            <settings>
+                <filter>select</filter>
+                <options class="Tirehub\TransferNetwork\Model\Config\Source\ColorOptions"/>
+                <editor>
+                    <editorType>select</editorType>
+                </editor>
+                <dataType>select</dataType>
+                <label translate="true">Color ID</label>
+                <visible>false</visible>
+            </settings>
+        </column>
         <column name="active" component="Magento_Ui/js/grid/columns/select">
             <settings>
                 <options class="Magento\Config\Model\Config\Source\Yesno"/>

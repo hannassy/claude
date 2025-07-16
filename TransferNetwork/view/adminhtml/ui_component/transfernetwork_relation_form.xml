@@ -97,6 +97,25 @@
                 </select>
             </formElements>
         </field>
+        <field name="color_id" formElement="select">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="source" xsi:type="string">relation</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>text</dataType>
+                <label translate="true">Color</label>
+                <dataScope>color_id</dataScope>
+            </settings>
+            <formElements>
+                <select>
+                    <settings>
+                        <options class="Tirehub\TransferNetwork\Model\Config\Source\ColorOptions"/>
+                    </settings>
+                </select>
+            </formElements>
+        </field>
         <field name="active" formElement="checkbox">
             <argument name="data" xsi:type="array">
                 <item name="config" xsi:type="array">
