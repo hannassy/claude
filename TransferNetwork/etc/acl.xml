@@ -6,6 +6,7 @@
             <resource id="Magento_Backend::admin">
                 <resource id="Tirehub_TransferNetwork::transfernetwork" title="Transfer Network" sortOrder="100">
                     <resource id="Tirehub_TransferNetwork::location" title="Locations" sortOrder="10"/>
+                    <resource id="Tirehub_TransferNetwork::color" title="Colors" sortOrder="12"/>
                     <resource id="Tirehub_TransferNetwork::relation" title="Relations" sortOrder="20"/>
                 </resource>
             </resource>

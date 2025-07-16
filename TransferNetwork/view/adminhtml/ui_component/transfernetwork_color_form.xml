@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">transfernetwork_color_form.color_form_data_source</item>
+        </item>
+        <item name="label" xsi:type="string" translate="true">Color Information</item>
+        <item name="template" xsi:type="string">templates/form/collapsible</item>
+    </argument>
+    <settings>
+        <buttons>
+            <button name="back" class="Tirehub\TransferNetwork\Block\Adminhtml\Color\Edit\BackButton"/>
+            <button name="delete" class="Tirehub\TransferNetwork\Block\Adminhtml\Color\Edit\DeleteButton"/>
+            <button name="save" class="Tirehub\TransferNetwork\Block\Adminhtml\Color\Edit\SaveButton"/>
+            <button name="save_and_continue" class="Tirehub\TransferNetwork\Block\Adminhtml\Color\Edit\SaveAndContinueButton"/>
+        </buttons>
+        <namespace>transfernetwork_color_form</namespace>
+        <dataScope>data</dataScope>
+        <deps>
+            <dep>transfernetwork_color_form.color_form_data_source</dep>
+        </deps>
+    </settings>
+    <dataSource name="color_form_data_source">
+        <argument name="data" xsi:type="array">
+            <item name="js_config" xsi:type="array">
+                <item name="component" xsi:type="string">Magento_Ui/js/form/provider</item>
+            </item>
+        </argument>
+        <settings>
+            <submitUrl path="transfernetwork/color/save"/>
+        </settings>
+        <dataProvider class="Tirehub\TransferNetwork\Model\Color\DataProvider" name="color_form_data_source">
+            <settings>
+                <requestFieldName>entity_id</requestFieldName>
+                <primaryFieldName>entity_id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <fieldset name="general">
+        <settings>
+            <label translate="true">General Information</label>
+        </settings>
+        <field name="entity_id" formElement="input">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="source" xsi:type="string">color</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>text</dataType>
+                <visible>false</visible>
+                <dataScope>entity_id</dataScope>
+            </settings>
+        </field>
+        <field name="color_name" formElement="input">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="source" xsi:type="string">color</item>
+                </item>
+            </argument>
+            <settings>
+                <validation>
+                    <rule name="required-entry" xsi:type="boolean">true</rule>
+                </validation>
+                <dataType>text</dataType>
+                <label translate="true">Color Name</label>
+                <dataScope>color_name</dataScope>
+            </settings>
+        </field>
+        <field name="color_code" formElement="input">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="source" xsi:type="string">color</item>
+                </item>
+            </argument>
+            <settings>
+                <validation>
+                    <rule name="required-entry" xsi:type="boolean">true</rule>
+                    <rule name="validate-color" xsi:type="boolean">true</rule>
+                </validation>
+                <dataType>text</dataType>
+                <label translate="true">Color Code (e.g., #FF0000)</label>
+                <dataScope>color_code</dataScope>
+                <notice translate="true">Enter a valid hex color code (e.g., #FF0000 for red)</notice>
+            </settings>
+        </field>
+    </fieldset>
+</form>

@@ -7,7 +7,9 @@
             "latitude": true,
             "longitude": true,
             "rdc_cluster": true,
+            "color_id": true,
             "pin_color": true,
+            "icon": true,
             "is_tirehub": true,
             "active": true,
             "rdc_inventory_visible": true,
@@ -18,11 +20,28 @@
             "TIREHUB_TRANSFERNETWORK_LOCATION_LOCATION_NAME": true,
             "TIREHUB_TRANSFERNETWORK_LOCATION_ACTIVE": true,
             "TIREHUB_TRANSFERNETWORK_LOCATION_RDC_CLUSTER": true,
-            "TIREHUB_TRANSFERNETWORK_LOCATION_IS_TIREHUB": true
+            "TIREHUB_TRANSFERNETWORK_LOCATION_IS_TIREHUB": true,
+            "TIREHUB_TRANSFERNETWORK_LOCATION_COLOR_ID": true
         },
         "constraint": {
             "PRIMARY": true,
-            "TIREHUB_TRANSFERNETWORK_LOCATION_LOCATION_ID": true
+            "TIREHUB_TRANSFERNETWORK_LOCATION_LOCATION_ID": true,
+            "TIREHUB_TRANSFERNETWORK_LOCATION_COLOR_ID": true
+        }
+    },
+    "tirehub_transfernetwork_color": {
+        "column": {
+            "entity_id": true,
+            "color_name": true,
+            "color_code": true,
+            "created_at": true,
+            "updated_at": true
+        },
+        "index": {
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "TIREHUB_TRANSFERNETWORK_COLOR_NAME_UNIQUE": true
         }
     },
     "tirehub_transfernetwork_location_relation": {

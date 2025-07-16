@@ -72,14 +72,24 @@ class Location extends AbstractModel
         return $this->setData('rdc_cluster', $rdcCluster);
     }
 
-    public function getPinColor(): ?string
+    public function getColorId(): ?int
     {
-        return $this->getData('pin_color');
+        return $this->getData('color_id') ? (int)$this->getData('color_id') : null;
     }
 
-    public function setPinColor(?string $pinColor): self
+    public function setColorId(?int $colorId): self
     {
-        return $this->setData('pin_color', $pinColor);
+        return $this->setData('color_id', $colorId);
+    }
+
+    public function getIcon(): ?string
+    {
+        return $this->getData('icon');
+    }
+
+    public function setIcon(?string $icon): self
+    {
+        return $this->setData('icon', $icon);
     }
 
     public function getIsTirehub(): bool

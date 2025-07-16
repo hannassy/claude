@@ -2,6 +2,22 @@
 <schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
 
+    <!-- Colors table -->
+    <table name="tirehub_transfernetwork_color" resource="default" engine="innodb" comment="Transfer Network Colors">
+        <column xsi:type="int" name="entity_id" unsigned="true" nullable="false" identity="true" comment="Entity ID"/>
+        <column xsi:type="varchar" name="color_name" nullable="false" length="100" comment="Color Name"/>
+        <column xsi:type="varchar" name="color_code" nullable="false" length="20" comment="Color Code"/>
+        <column xsi:type="timestamp" name="created_at" on_update="false" nullable="false" default="CURRENT_TIMESTAMP" comment="Created At"/>
+        <column xsi:type="timestamp" name="updated_at" on_update="true" nullable="false" default="CURRENT_TIMESTAMP" comment="Updated At"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="entity_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="TIREHUB_TRANSFERNETWORK_COLOR_NAME_UNIQUE">
+            <column name="color_name"/>
+        </constraint>
+    </table>
+
+    <!-- Updated locations table -->
     <table name="tirehub_transfernetwork_location" resource="default" engine="innodb" comment="Transfer Network Locations">
         <column xsi:type="int" name="entity_id" unsigned="true" nullable="false" identity="true" comment="Entity ID"/>
         <column xsi:type="int" name="location_id" unsigned="true" nullable="false" comment="Location ID"/>
@@ -9,8 +25,9 @@
         <column xsi:type="decimal" name="latitude" scale="8" precision="11" nullable="false" comment="Latitude"/>
         <column xsi:type="decimal" name="longitude" scale="8" precision="11" nullable="false" comment="Longitude"/>
         <column xsi:type="varchar" name="rdc_cluster" nullable="true" length="100" comment="RDC Cluster"/>
-        <column xsi:type="varchar" name="pin_color" nullable="true" length="50" comment="Pin Color"/>
-        <column xsi:type="varchar" name="icon" length="1024" nullable="false" comment="Icon path" />
+        <column xsi:type="int" name="color_id" unsigned="true" nullable="true" comment="Color ID"/>
+        <column xsi:type="varchar" name="pin_color" nullable="true" comment="Pin color"/>
+        <column xsi:type="varchar" name="icon" length="1024" nullable="false" comment="Icon path"/>
         <column xsi:type="boolean" name="is_tirehub" nullable="false" default="1" comment="Is TireHub Location"/>
         <column xsi:type="boolean" name="active" nullable="false" default="1" comment="Active Status"/>
         <column xsi:type="boolean" name="rdc_inventory_visible" nullable="false" default="0" comment="RDC Inventory Visible"/>
@@ -22,6 +39,9 @@
         <constraint xsi:type="unique" referenceId="TIREHUB_TRANSFERNETWORK_LOCATION_ID_UNIQUE">
             <column name="location_id"/>
         </constraint>
+        <constraint xsi:type="foreign" referenceId="TIREHUB_TRANSFERNETWORK_LOCATION_COLOR_ID"
+                table="tirehub_transfernetwork_location" column="color_id"
+                referenceTable="tirehub_transfernetwork_color" referenceColumn="entity_id" onDelete="SET NULL"/>
         <index referenceId="TIREHUB_TRANSFERNETWORK_LOCATION_NAME" indexType="btree">
             <column name="location_name"/>
         </index>
@@ -33,6 +53,9 @@
         </index>
         <index referenceId="TIREHUB_TRANSFERNETWORK_LOCATION_IS_TIREHUB" indexType="btree">
             <column name="is_tirehub"/>
+        </index>
+        <index referenceId="TIREHUB_TRANSFERNETWORK_LOCATION_COLOR_ID" indexType="btree">
+            <column name="color_id"/>
         </index>
     </table>
 
@@ -49,13 +72,13 @@
         <constraint xsi:type="primary" referenceId="PRIMARY">
             <column name="relation_id"/>
         </constraint>
-        <constraint xsi:type="foreign" referenceId="TIREHUB_TRANSFERNETWORK_RELATION_FROM_LOCATION_ID"
+        <constraint xsi:type="foreign" referenceId="FK_7E1C7B880D99FF27BA5626BD1AC3328E"
                 table="tirehub_transfernetwork_location_relation" column="location_id_from"
                 referenceTable="tirehub_transfernetwork_location" referenceColumn="location_id" onDelete="CASCADE"/>
-        <constraint xsi:type="foreign" referenceId="TIREHUB_TRANSFERNETWORK_RELATION_TO_LOCATION_ID"
+        <constraint xsi:type="foreign" referenceId="FK_7607A1463C10CDC88CAAEF995DF9A25E"
                 table="tirehub_transfernetwork_location_relation" column="location_id_to"
                 referenceTable="tirehub_transfernetwork_location" referenceColumn="location_id" onDelete="CASCADE"/>
-        <constraint xsi:type="unique" referenceId="TIREHUB_TRANSFERNETWORK_LOCATION_RELATION_UNIQUE">
+        <constraint xsi:type="unique" referenceId="UNQ_210A623D3DDA9E9E8D6EFB1133ADBA4E">
             <column name="location_id_from"/>
             <column name="location_id_to"/>
         </constraint>

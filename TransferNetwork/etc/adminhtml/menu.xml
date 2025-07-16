@@ -14,6 +14,13 @@
                 parent="Tirehub_TransferNetwork::transfernetwork"
                 action="transfernetwork/location"
                 resource="Tirehub_TransferNetwork::location"/>
+        <add id="Tirehub_TransferNetwork::colors"
+                title="Colors"
+                module="Tirehub_TransferNetwork"
+                sortOrder="12"
+                parent="Tirehub_TransferNetwork::transfernetwork"
+                action="transfernetwork/color"
+                resource="Tirehub_TransferNetwork::color"/>
         <add id="Tirehub_TransferNetwork::relations"
                 title="Relations"
                 module="Tirehub_TransferNetwork"

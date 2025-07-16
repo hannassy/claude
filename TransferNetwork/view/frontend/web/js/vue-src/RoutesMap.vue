@@ -50,7 +50,7 @@ import _ from 'lodash';
 
 export default {
     props: {
-        defaultLocations: {
+        locations: {
             type: Array
         },
         routes: {
@@ -67,30 +67,8 @@ export default {
             directionsService: null,
             routesProcessed: 0,
             totalRoutes: 0,
-            showNonThLocations: true,
-            locations: []
+            showNonThLocations: true
         };
-    },
-    created () {
-        this.locations = _.map(this.defaultLocations, (location) => {
-            location.address = '814 44TH ST NW STE 102 AUBURN, WA98001-1754 253-856-1800';
-            location.openingHours = [
-                {
-                    weekDay: 'Monday - Friday',
-                    time: '07:30 AM - 05:00 PM'
-                },
-                {
-                    weekDay: 'Saturday',
-                    time: '07:30 AM - 01:00 PM'
-                }
-            ];
-            location.cutoff = {
-                transferToPrimary: 'From 134 Portland',
-                days: 1,
-                time: '04:00 PM'
-            };
-            return location;
-        });
     },
     mounted () {
         if (!(window && window.google && window.google.maps)) {
@@ -164,29 +142,24 @@ export default {
         },
 
         getMarkerIcon (location) {
-            let fillColor = '#ffffff';
+            // Use location.icon if present
+            if (location.icon) {
+                return {
+                    url: location.icon,
+                    scaledSize: new google.maps.Size(24, 24),
+                    origin: new google.maps.Point(0, 0),
+                    anchor: new google.maps.Point(12, 12)
+                };
+            }
+
+            // Fallback to current marker icon logic
+            const fillColor = location.color || '#ffffff';
             const strokeColor = '#333333';
             let scale = 8;
 
-            // Set colors based on cluster type
-            switch (location.cluster) {
-            case 'RDC':
-                fillColor = '#e74c3c';
+            // Set scale based on cluster type
+            if (location.cluster === 'RDC') {
                 scale = 12;
-                break;
-            case '500 Cluster':
-                fillColor = '#95a5a6';
-                break;
-            case '501 Cluster':
-                fillColor = '#3498db';
-                break;
-            case '502 Cluster':
-                fillColor = '#f1c40f';
-                break;
-            case 'No RDC':
-            default:
-                fillColor = '#ffffff';
-                break;
             }
 
             return {
@@ -205,6 +178,7 @@ export default {
                     <div class="info-window-name">${location.name}</div>
                     <div class="info-window-content">
                         <div class="info-window-content-address">${location.address}</div>
+                        ${location.openingHours ? `
                         <div class="info-window-content-hours">
                             <div class="hours-header">${this.t('Opening Hours:')}</div>
                             ${location.openingHours.map(hours => `
@@ -214,6 +188,7 @@ export default {
                                 </div>
                             `).join('')}
                         </div>
+                        ` : ''}
                         ${location.cutoff ? `
                             <div class="info-window-content-cutoff">
                                 <div class="cutoff-header">
@@ -221,11 +196,13 @@ export default {
                                     <div>Days</div>
                                     <div>Cutoff</div>
                                 </div>
-                                <div class="cutoff-info">
-                                    <div class="cutoff-info-label">${location.cutoff.transferToPrimary}</div>
-                                    <div>${location.cutoff.days}</div>
-                                    <div>${location.cutoff.time}</div>
-                                </div>
+                                ${location.cutoff.map(cutoff => `
+                                    <div class="cutoff-info">
+                                        <div class="cutoff-info-label">${cutoff.transferToPrimary}</div>
+                                        <div>${cutoff.days}</div>
+                                        <div>${cutoff.time}</div>
+                                    </div>
+                                `).join('')}
                             </div>
                         ` : ''}
                     </div>
@@ -311,7 +288,7 @@ export default {
                 geodesic: false,
                 strokeColor: route.color,
                 strokeOpacity: 0.7,
-                strokeWeight: route.weight
+                strokeWeight: 2
             });
 
             // Store route info on polyline

@@ -8,6 +8,8 @@
             <argument name="collections" xsi:type="array">
                 <item name="transfernetwork_location_listing_data_source" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\Location\Grid\Collection</item>
                 <item name="location_form_data_source" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\Location\Collection</item>
+                <item name="transfernetwork_color_listing_data_source" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\Color\Grid\Collection</item>
+                <item name="color_form_data_source" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\Color\Collection</item>
                 <item name="transfernetwork_relation_listing_data_source" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\LocationRelation\Grid\Collection</item>
                 <item name="relation_form_data_source" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\LocationRelation\Collection</item>
             </argument>
@@ -19,6 +21,14 @@
         <arguments>
             <argument name="mainTable" xsi:type="string">tirehub_transfernetwork_location</argument>
             <argument name="resourceModel" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\Location</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Grid Collection for Color Listing -->
+    <virtualType name="Tirehub\TransferNetwork\Model\ResourceModel\Color\Grid\Collection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">tirehub_transfernetwork_color</argument>
+            <argument name="resourceModel" xsi:type="string">Tirehub\TransferNetwork\Model\ResourceModel\Color</argument>
         </arguments>
     </virtualType>
 

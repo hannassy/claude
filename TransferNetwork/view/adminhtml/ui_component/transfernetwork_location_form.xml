@@ -128,7 +128,7 @@
                 <dataScope>rdc_cluster</dataScope>
             </settings>
         </field>
-        <field name="pin_color" formElement="input">
+        <field name="color_id" formElement="select">
             <argument name="data" xsi:type="array">
                 <item name="config" xsi:type="array">
                     <item name="source" xsi:type="string">location</item>
@@ -136,9 +136,16 @@
             </argument>
             <settings>
                 <dataType>text</dataType>
-                <label translate="true">Pin Color</label>
-                <dataScope>pin_color</dataScope>
+                <label translate="true">Color</label>
+                <dataScope>color_id</dataScope>
             </settings>
+            <formElements>
+                <select>
+                    <settings>
+                        <options class="Tirehub\TransferNetwork\Model\Config\Source\ColorOptions"/>
+                    </settings>
+                </select>
+            </formElements>
         </field>
         <field name="active" formElement="checkbox">
             <argument name="data" xsi:type="array">
@@ -210,25 +217,6 @@
                         <prefer>toggle</prefer>
                     </settings>
                 </checkbox>
-            </formElements>
-        </field>
-        <field name="pin_color" formElement="select">
-            <argument name="data" xsi:type="array">
-                <item name="config" xsi:type="array">
-                    <item name="source" xsi:type="string">location</item>
-                </item>
-            </argument>
-            <settings>
-                <dataType>text</dataType>
-                <label translate="true">Pin Color</label>
-                <dataScope>pin_color</dataScope>
-            </settings>
-            <formElements>
-                <select>
-                    <settings>
-                        <options class="Tirehub\TransferNetwork\Model\Config\Source\PinColor"/>
-                    </settings>
-                </select>
             </formElements>
         </field>
         <field name="icon" formElement="imageUploader">

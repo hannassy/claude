@@ -26,7 +26,7 @@ class GetMapData
     public function execute(): array
     {
         return [
-            'defaultLocations' => $this->getLocationData(),
+            'locations' => $this->getLocationData(),
             'routes' => $this->getRelationData()
         ];
     }
