@@ -56,7 +56,7 @@ class GetMapData
                     'isTirehub' => (int)$location->getIsTirehub(),
                     'address' => $this->getLocationAddress($locationInfo),
                     'openingHours' => $this->getLocationOpeningHours($locationInfo),
-                    'cutoff' => $this->getLocationCutOff($locationInfo),
+                    'cutoff' => $this->getLocationCutOff($location),
                     'icon' => $location->getIcon(),
                 ];
 
@@ -285,12 +285,49 @@ class GetMapData
         ];
     }
 
-    private function getLocationCutOff(array $locationsInfo): string
+    private function getLocationCutOff($location): array
     {
-        if (!$locationsInfo) {
-            return '';
+        if (!$location || !$location->getLocationId()) {
+            return [];
         }
 
-        return '';
+        $locationId = $location->getLocationId();
+
+        try {
+            $relationCollection = $this->relationCollectionFactory->create();
+            $relationCollection->addFieldToFilter('main_table.location_id_from', $locationId)
+                ->addFieldToFilter('main_table.active', 1)
+                ->joinLocationDetails();
+
+            $cutoffData = [];
+
+            foreach ($relationCollection as $relation) {
+                $toLocationName = $relation->getData('to_location_name');
+                $cutoffDays = $relation->getCutoffDays();
+                $cutoffTime = $relation->getCutoffTime();
+
+                if ($toLocationName) {
+                    $formattedTime = '';
+                    if ($cutoffTime) {
+                        try {
+                            $time = new \DateTime($cutoffTime);
+                            $formattedTime = $time->format('g:i A');
+                        } catch (\Exception $e) {
+                            $formattedTime = $cutoffTime;
+                        }
+                    }
+
+                    $cutoffData[] = [
+                        'to' => $relation->getLocationIdTo() . ' ' . $toLocationName,
+                        'days' => $cutoffDays ? (string)$cutoffDays : '',
+                        'time' => $formattedTime
+                    ];
+                }
+            }
+
+            return $cutoffData;
+        } catch (\Exception $e) {
+            return [];
+        }
     }
 }

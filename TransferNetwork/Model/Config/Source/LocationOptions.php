@@ -20,12 +20,12 @@ class LocationOptions implements ArrayInterface
         $options = [];
         $collection = $this->locationCollectionFactory->create();
         $collection->addFieldToFilter('active', 1);
-        $collection->setOrder('location_name', 'ASC');
+        $collection->setOrder('location_id', 'ASC');
 
         foreach ($collection as $location) {
             $options[] = [
                 'value' => $location->getLocationId(),
-                'label' => $location->getLocationName() . ' (ID: ' . $location->getLocationId() . ')'
+                'label' => $location->getLocationId() . ' ' . $location->getLocationName()
             ];
         }
 
