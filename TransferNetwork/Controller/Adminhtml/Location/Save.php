@@ -48,11 +48,8 @@ class Save extends Action
                 unset($data['entity_id']);
             }
 
+            $data = $this->processIconData($data);
             $model->setData($data);
-
-            if (!empty($data['icon'][0]['url'])) {
-                $model->setIcon($data['icon'][0]['url']);
-            }
 
             try {
                 $this->locationResource->save($model);
@@ -72,5 +69,33 @@ class Save extends Action
         }
 
         return $resultRedirect->setPath('*/*/');
+    }
+
+    private function processIconData(array $data): array
+    {
+        if (!empty($data['icon'][0]['url'])) {
+            $iconUrl = $data['icon'][0]['url'];
+            $data['icon'] = $this->normalizeIconPath($iconUrl);
+        } elseif (!empty($data['icon'][0]['name']) && !empty($data['icon'][0]['tmp_name'])) {
+            $data['icon'] = $data['icon'][0]['url'] ?? '';
+        } else {
+            unset($data['icon']);
+        }
+
+        return $data;
+    }
+
+    private function normalizeIconPath(string $iconPath): string
+    {
+        if (str_starts_with($iconPath, 'http://') || str_starts_with($iconPath, 'https://')) {
+            $parsedUrl = parse_url($iconPath);
+            return $parsedUrl['path'] ?? $iconPath;
+        }
+
+        if (str_starts_with($iconPath, '/media/')) {
+            return ltrim($iconPath, '/media/');
+        }
+
+        return $iconPath;
     }
 }

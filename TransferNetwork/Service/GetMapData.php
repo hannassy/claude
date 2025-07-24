@@ -9,6 +9,8 @@ use Tirehub\TransferNetwork\Model\ResourceModel\Color\CollectionFactory as Color
 use Magento\Framework\Exception\LocalizedException;
 use Tirehub\ApiMiddleware\Api\Request\GetLocationInfoInterface;
 use Tirehub\Customer\Api\ConvertToTimeInterface;
+use Magento\Framework\UrlInterface;
+use Magento\Store\Model\StoreManagerInterface;
 use Exception;
 
 class GetMapData
@@ -18,7 +20,8 @@ class GetMapData
         private readonly RelationCollectionFactory $relationCollectionFactory,
         private readonly ColorCollectionFactory $colorCollectionFactory,
         private readonly GetLocationInfoInterface $getLocationInfo,
-        private readonly ConvertToTimeInterface $convertToTime
+        private readonly ConvertToTimeInterface $convertToTime,
+        private readonly StoreManagerInterface $storeManager
     ) {
     }
 
@@ -57,7 +60,7 @@ class GetMapData
                     'address' => $this->getLocationAddress($locationInfo),
                     'openingHours' => $this->getLocationOpeningHours($locationInfo),
                     'cutoff' => $this->getLocationCutOff($location),
-                    'icon' => $location->getIcon(),
+                    'icon' => $this->getLocationIconUrl($location->getIcon()),
                 ];
 
                 if ($this->isRdcLocation($location)) {
@@ -104,6 +107,46 @@ class GetMapData
         }
 
         return $relations;
+    }
+
+    private function getLocationIconUrl(?string $iconPath): ?string
+    {
+        if (!$iconPath) {
+            return null;
+        }
+
+        try {
+            $baseMediaUrl = $this->storeManager->getStore()->getBaseUrl(UrlInterface::URL_TYPE_MEDIA);
+
+            // If it's already a full URL, return as is
+            if (str_starts_with($iconPath, 'http://') || str_starts_with($iconPath, 'https://')) {
+                return $iconPath;
+            }
+
+            // Handle .renditions/ path from media gallery
+            if (str_starts_with($iconPath, '.renditions/')) {
+                $iconPath = ltrim($iconPath, '.renditions/');
+            }
+
+            // Handle wysiwyg paths from media gallery
+            if (str_starts_with($iconPath, 'wysiwyg/')) {
+                $iconPath = 'wysiwyg/' . ltrim($iconPath, 'wysiwyg/');
+            }
+
+            // If it starts with /media/, remove the /media/ part since baseMediaUrl already includes it
+            if (str_starts_with($iconPath, '/media/')) {
+                $iconPath = ltrim($iconPath, '/media/');
+            }
+
+            // Ensure path starts with /
+            if (!str_starts_with($iconPath, '/')) {
+                $iconPath = '/' . $iconPath;
+            }
+
+            return rtrim($baseMediaUrl, '/') . $iconPath;
+        } catch (Exception $e) {
+            return null;
+        }
     }
 
     private function getColors(): array
