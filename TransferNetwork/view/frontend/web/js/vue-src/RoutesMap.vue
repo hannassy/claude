@@ -35,9 +35,16 @@
             <div class="map-legend-action">
                 <label class="checkbox-custom">
                     <span class="checkbox-custom-label">
-                        {{ t('Show / Hide Non-TH Locations') }}
+                        {{ t('Show Non-TH Locations') }}
                     </span>
                     <input v-model="showNonThLocations" type="checkbox">
+                    <span class="checkbox-custom-checkmark checkbox-custom-checkmark-arrow" />
+                </label>
+                <label class="checkbox-custom">
+                    <span class="checkbox-custom-label">
+                        {{ t('Show TLC Numbers') }}
+                    </span>
+                    <input v-model="showTlsNumbers" type="checkbox">
                     <span class="checkbox-custom-checkmark checkbox-custom-checkmark-arrow" />
                 </label>
             </div>
@@ -64,10 +71,12 @@ export default {
             markers: {},
             polylines: [],
             infoWindows: [],
+            markerLabels: [],
             directionsService: null,
             routesProcessed: 0,
             totalRoutes: 0,
-            showNonThLocations: true
+            showNonThLocations: true,
+            showTlsNumbers: true
         };
     },
     mounted () {
@@ -92,6 +101,9 @@ export default {
     watch: {
         showNonThLocations (visible) {
             this.toggleHhLocations(visible);
+        },
+        showTlsNumbers (visible) {
+            this.toggleTlsNumbers(visible);
         }
     },
     methods: {
@@ -113,7 +125,7 @@ export default {
             }
         },
         createMarkers () {
-            this.locations.forEach(location => {
+            this.locations.forEach((location, index) => {
                 const marker = new google.maps.Marker({
                     position: { lat: location.lat, lng: location.lng },
                     map: this.map,
@@ -124,6 +136,12 @@ export default {
                 // Store custom info on marker
                 marker.cluster = location.cluster;
                 marker.isTirehub = location.isTirehub;
+
+                // Create label below marker
+                const locationType = _.get(location, 'type', 'tlc');
+                if (_.toLower(locationType) === 'tlc') {
+                    this.createMarkerLabel(marker, location.id, location.isTirehub);
+                }
 
                 // Create info window
                 const infoWindow = new google.maps.InfoWindow({
@@ -158,7 +176,8 @@ export default {
             let scale = 8;
 
             // Set scale based on cluster type
-            if (location.cluster === 'RDC') {
+            const locationType = _.get(location, 'type', 'tlc');
+            if (_.toLower(locationType) === 'rdc') {
                 scale = 12;
             }
 
@@ -189,7 +208,7 @@ export default {
                             `).join('')}
                         </div>
                         ` : ''}
-                        ${location.cutoff ? `
+                        ${location.cutoff.length ? `
                             <div class="info-window-content-cutoff">
                                 <div class="cutoff-header">
                                     <div>Transfer To Primary</div>
@@ -198,7 +217,7 @@ export default {
                                 </div>
                                 ${location.cutoff.map(cutoff => `
                                     <div class="cutoff-info">
-                                        <div class="cutoff-info-label">${cutoff.transferToPrimary}</div>
+                                        <div class="cutoff-info-label">${cutoff.to}</div>
                                         <div>${cutoff.days}</div>
                                         <div>${cutoff.time}</div>
                                     </div>
@@ -208,6 +227,51 @@ export default {
                     </div>
                 </div>
             `;
+        },
+
+        createMarkerLabel (marker, text, isTirehub) {
+            // Create custom overlay for the label positioned below marker
+            const LabelOverlay = function (position, text, map) {
+                this.position = position;
+                this.text = text;
+                this.map = map;
+                this.div = null;
+                this.setMap(map);
+            };
+
+            LabelOverlay.prototype = new google.maps.OverlayView();
+
+            LabelOverlay.prototype.onAdd = function() {
+                const div = document.createElement('div');
+                div.className = 'marker-label';
+                div.textContent = this.text;
+
+                this.div = div;
+                const panes = this.getPanes();
+                panes.overlayMouseTarget.appendChild(div);
+            };
+
+            LabelOverlay.prototype.draw = function () {
+                const overlayProjection = this.getProjection();
+                const position = overlayProjection.fromLatLngToDivPixel(this.position);
+
+                if (this.div) {
+                    this.div.style.left = (position.x - 16) + 'px';
+                    this.div.style.top = (position.y + 15) + 'px';
+                }
+            };
+
+            LabelOverlay.prototype.onRemove = function() {
+                if (this.div) {
+                    this.div.parentNode.removeChild(this.div);
+                    this.div = null;
+                }
+            };
+
+            // Create and store the overlay
+            const overlay = new LabelOverlay(marker.getPosition(), text, this.map);
+            overlay.isTirehub = isTirehub;
+            this.markerLabels.push(overlay);
         },
 
         drawRoutes () {
@@ -332,6 +396,17 @@ export default {
                 }
             });
 
+            // Toggle marker labels for non-Tirehub locations
+            this.markerLabels.forEach(overlay => {
+                if (!overlay.isTirehub) {
+                    if (visible) {
+                        overlay.setMap(this.map);
+                    } else {
+                        overlay.setMap(null);
+                    }
+                }
+            });
+
             // Also toggle related routes
             this.polylines.forEach(polyline => {
                 const fromMarker = this.markers[polyline.fromId];
@@ -339,6 +414,16 @@ export default {
 
                 if ((fromMarker && !fromMarker.isTirehub) || (toMarker && !toMarker.isTirehub)) {
                     polyline.setVisible(visible);
+                }
+            });
+        },
+
+        toggleTlsNumbers (visible) {
+            this.markerLabels.forEach(overlay => {
+                if (visible) {
+                    overlay.setMap(this.map);
+                } else {
+                    overlay.setMap(null);
                 }
             });
         },
