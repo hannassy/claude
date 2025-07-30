@@ -1,0 +1,33 @@
+<?php
+/**
+ * @var \Tirehub\TransferNetwork\Block\Adminhtml\Relation\ImportInstructions $block
+ */
+?>
+<div class="import-instructions">
+    <div class="admin__field-note">
+        <p><strong><?= __('File Format Requirements:') ?></strong></p>
+        <ul>
+            <li><strong>active</strong> - <?= __('Y for active, N for inactive') ?></li>
+            <li><strong>TransferTo</strong> - <?= __('Destination location ID') ?></li>
+            <li><strong>TransferFrom</strong> - <?= __('Source location ID') ?></li>
+            <li><strong>CutoffDays</strong> - <?= __('Number of days (optional, supports decimals like 1.5)') ?></li>
+            <li><strong>CutoffTime</strong> - <?= __('Time in HH:MM format (optional)') ?></li>
+            <li><strong>UnloadMinutes</strong> - <?= __('Number of minutes (optional)') ?></li>
+        </ul>
+
+        <p><strong><?= __('Notes:') ?></strong></p>
+        <ul>
+            <li><?= __('Location IDs must exist and be active') ?></li>
+            <li><?= __('Existing relations will be updated') ?></li>
+            <li><?= __('Invalid rows will be skipped') ?></li>
+            <li><?= __('First row should contain column headers') ?></li>
+            <li><?= __('Supported formats: .xlsx, .xls, .csv') ?></li>
+        </ul>
+
+        <p>
+            <a href="<?= $block->getExportUrl() ?>" class="action-secondary" target="_blank">
+                <span><?= __('Download Sample/Current Data') ?></span>
+            </a>
+        </p>
+    </div>
+</div>

@@ -17,6 +17,21 @@
                 <class>primary</class>
                 <label translate="true">Add New Relation</label>
             </button>
+            <button name="import">
+                <class>action-secondary</class>
+                <label translate="true">Import from Excel</label>
+                <actions>
+                    <action name="0">
+                        <targetName>transfernetwork_relation_listing.transfernetwork_relation_listing.relation_import_modal</targetName>
+                        <actionName>openModal</actionName>
+                    </action>
+                </actions>
+            </button>
+            <button name="export">
+                <url path="*/*/export"/>
+                <class>action-secondary</class>
+                <label translate="true">Export to Excel</label>
+            </button>
         </buttons>
     </settings>
     <dataSource name="transfernetwork_relation_listing_data_source" component="Magento_Ui/js/grid/provider">
@@ -191,4 +206,105 @@
             </settings>
         </actionsColumn>
     </columns>
+    <modal name="relation_import_modal" component="Magento_Ui/js/modal/modal-component">
+        <settings>
+            <options>
+                <option name="title" xsi:type="string" translate="true">Import Relations from Excel</option>
+                <option name="type" xsi:type="string">popup</option>
+                <option name="responsive" xsi:type="boolean">true</option>
+                <option name="innerScroll" xsi:type="boolean">true</option>
+                <option name="modalClass" xsi:type="string">import-relations-modal</option>
+                <option name="buttons" xsi:type="array">
+                    <item name="0" xsi:type="array">
+                        <item name="text" xsi:type="string" translate="true">Cancel</item>
+                        <item name="class" xsi:type="string">action-secondary</item>
+                        <item name="actions" xsi:type="array">
+                            <item name="0" xsi:type="string">closeModal</item>
+                        </item>
+                    </item>
+                    <item name="1" xsi:type="array">
+                        <item name="text" xsi:type="string" translate="true">Import</item>
+                        <item name="class" xsi:type="string">action-primary</item>
+                        <item name="actions" xsi:type="array">
+                            <item name="0" xsi:type="array">
+                                <item name="targetName" xsi:type="string">transfernetwork_relation_listing.transfernetwork_relation_listing.relation_import_modal.relation_import_form</item>
+                                <item name="actionName" xsi:type="string">save</item>
+                            </item>
+                        </item>
+                    </item>
+                </option>
+            </options>
+        </settings>
+        <form name="relation_import_form">
+            <argument name="data" xsi:type="array">
+                <item name="js_config" xsi:type="array">
+                    <item name="component" xsi:type="string">Tirehub_TransferNetwork/js/form/import-form</item>
+                </item>
+            </argument>
+            <settings>
+                <deps>
+                    <dep>transfernetwork_relation_listing.transfernetwork_relation_listing_data_source</dep>
+                </deps>
+                <namespace>transfernetwork_relation_listing</namespace>
+                <ajaxSave>true</ajaxSave>
+                <ajaxSaveType>simple</ajaxSaveType>
+                <dataScope>data</dataScope>
+            </settings>
+            <dataSource name="relation_import_data_source">
+                <argument name="data" xsi:type="array">
+                    <item name="js_config" xsi:type="array">
+                        <item name="component" xsi:type="string">Magento_Ui/js/form/provider</item>
+                    </item>
+                </argument>
+                <settings>
+                    <submitUrl path="transfernetwork/relation/import"/>
+                </settings>
+            </dataSource>
+            <fieldset name="import_fieldset">
+                <settings>
+                    <label translate="true">Import Configuration</label>
+                    <collapsible>false</collapsible>
+                    <opened>true</opened>
+                </settings>
+                <field name="import_file" formElement="fileUploader">
+                    <argument name="data" xsi:type="array">
+                        <item name="config" xsi:type="array">
+                            <item name="source" xsi:type="string">import</item>
+                        </item>
+                    </argument>
+                    <settings>
+                        <elementTmpl>ui/form/element/uploader/uploader</elementTmpl>
+                        <dataType>string</dataType>
+                        <label translate="true">Select Excel/CSV File</label>
+                        <dataScope>import_file</dataScope>
+                        <validation>
+                            <rule name="required-entry" xsi:type="boolean">true</rule>
+                        </validation>
+                    </settings>
+                    <formElements>
+                        <fileUploader>
+                            <settings>
+                                <allowedExtensions>csv xlsx xls</allowedExtensions>
+                                <maxFileSize>10485760</maxFileSize>
+                                <uploaderConfig>
+                                    <param xsi:type="url" name="url" path="transfernetwork/relation/uploadFile"/>
+                                </uploaderConfig>
+                                <previewTmpl>Magento_Catalog/image-preview</previewTmpl>
+                            </settings>
+                        </fileUploader>
+                    </formElements>
+                </field>
+                <container name="import_instructions">
+                    <argument name="data" xsi:type="array">
+                        <item name="config" xsi:type="array">
+                            <item name="template" xsi:type="string">ui/form/components/complex</item>
+                        </item>
+                    </argument>
+                    <htmlContent name="instructions_content">
+                        <argument name="block" xsi:type="object">Tirehub\TransferNetwork\Block\Adminhtml\Relation\ImportInstructions</argument>
+                    </htmlContent>
+                </container>
+            </fieldset>
+        </form>
+    </modal>
 </listing>
