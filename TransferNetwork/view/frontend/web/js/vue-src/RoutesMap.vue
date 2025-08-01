@@ -188,10 +188,10 @@ export default {
         createInfoWindowContent (location) {
             return `
                 <div class="info-window">
-                    <div class="info-window-name">${location.name}</div>
+                    <div class="info-window-name">${location.id} ${location.name}</div>
                     <div class="info-window-content">
                         <div class="info-window-content-address">${location.address}</div>
-                        ${location.openingHours ? `
+                        ${location.openingHours.length ? `
                         <div class="info-window-content-hours">
                             <div class="hours-header">${this.t('Opening Hours:')}</div>
                             ${location.openingHours.map(hours => `
@@ -346,7 +346,7 @@ export default {
                 geodesic: false,
                 strokeColor: route.color,
                 strokeOpacity: 0.7,
-                strokeWeight: 2
+                strokeWeight: route.weight
             });
 
             // Store route info on polyline
