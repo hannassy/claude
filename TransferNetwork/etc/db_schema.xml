@@ -65,7 +65,7 @@
         <column xsi:type="int" name="location_id_to" unsigned="true" nullable="false" comment="To Location ID"/>
         <column xsi:type="int" name="color_id" unsigned="true" nullable="true" comment="Color ID"/>
         <column xsi:type="boolean" name="active" nullable="false" default="1" comment="Active Status"/>
-        <column xsi:type="decimal" name="cutoff_days" scale="1" precision="3" nullable="true" comment="Cutoff Days"/>
+        <column xsi:type="int" name="cutoff_days" unsigned="true" nullable="true" comment="Cutoff Days"/>
         <column xsi:type="varchar" name="cutoff_time" nullable="true" length="8" comment="Cutoff Time"/>
         <column xsi:type="int" name="unload_minutes" unsigned="true" nullable="true" comment="Unload Minutes"/>
         <column xsi:type="timestamp" name="created_at" on_update="false" nullable="false" default="CURRENT_TIMESTAMP" comment="Created At"/>

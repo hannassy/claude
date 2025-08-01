@@ -149,14 +149,10 @@
             <settings>
                 <validation>
                     <rule name="validate-number" xsi:type="boolean">true</rule>
-                    <rule name="validate-digits-range" xsi:type="boolean">true</rule>
-                    <rule name="digits-range-min" xsi:type="number">0</rule>
-                    <rule name="digits-range-max" xsi:type="number">99.9</rule>
                 </validation>
                 <dataType>text</dataType>
                 <label translate="true">Cutoff Days</label>
                 <dataScope>cutoff_days</dataScope>
-                <notice translate="true">Supports 1 decimal place (e.g., 1.5 days)</notice>
             </settings>
         </field>
         <field name="cutoff_time" formElement="date">

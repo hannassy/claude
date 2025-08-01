@@ -67,12 +67,12 @@ class LocationRelation extends AbstractModel
         return $this->setData('active', $active);
     }
 
-    public function getCutoffDays(): ?float
+    public function getCutoffDays(): ?int
     {
-        return $this->getData('cutoff_days') ? (float)$this->getData('cutoff_days') : null;
+        return $this->getData('cutoff_days') ? (int)$this->getData('cutoff_days') : null;
     }
 
-    public function setCutoffDays(?float $cutoffDays): self
+    public function setCutoffDays(?int $cutoffDays): self
     {
         return $this->setData('cutoff_days', $cutoffDays);
     }
