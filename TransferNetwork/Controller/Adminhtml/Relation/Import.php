@@ -129,7 +129,10 @@ class Import extends Action
             throw new \Exception('No data found in file.');
         }
 
-        $headers = array_map('trim', array_shift($csvData));
+        $headers = array_map(function($value) {
+            return $value !== null ? trim($value) : '';
+        }, array_shift($csvData));
+
         $expectedHeaders = ['active', 'TransferTo', 'TransferFrom', 'CutoffDays', 'CutoffTime', 'UnloadMinutes'];
 
         foreach ($expectedHeaders as $header) {
@@ -153,7 +156,9 @@ class Import extends Action
                 continue;
             }
 
-            $data = array_combine($headers, array_map('trim', $row));
+            $data = array_combine($headers, array_map(function($value) {
+                return $value !== null ? trim((string)$value) : '';
+            }, $row));
 
             try {
                 if (empty($data['TransferTo']) || empty($data['TransferFrom'])) {
@@ -192,7 +197,7 @@ class Import extends Action
 
                 $relation->setLocationIdFrom($transferFrom);
                 $relation->setLocationIdTo($transferTo);
-                $relation->setActive(strtoupper($data['active']) === 'Y' ? 1 : 0);
+                $relation->setActive(strtoupper($data['active']) === 'Y');
 
                 if (!empty($data['CutoffDays']) && is_numeric($data['CutoffDays'])) {
                     $relation->setCutoffDays((float)$data['CutoffDays']);

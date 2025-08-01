@@ -32,7 +32,7 @@ class Index implements HttpGetActionInterface
     public function execute()
     {
         $resultPage = $this->resultPageFactory->create();
-        $resultPage->getConfig()->getTitle()->set(__('Transfer Network Map'));
+        $resultPage->getConfig()->getTitle()->set(__('Route to Market Map'));
 
         return $resultPage;
     }
