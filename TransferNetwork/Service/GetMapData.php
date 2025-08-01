@@ -337,19 +337,42 @@ class GetMapData
         $locationId = $location->getLocationId();
 
         try {
+            // Get all relations involving this location (both FROM and TO)
             $relationCollection = $this->relationCollectionFactory->create();
-            $relationCollection->addFieldToFilter('main_table.location_id_from', $locationId)
-                ->addFieldToFilter('main_table.active', 1)
+            $relationCollection->getSelect()->where(
+                'main_table.location_id_from = ? OR main_table.location_id_to = ?',
+                $locationId,
+                $locationId
+            );
+            $relationCollection->addFieldToFilter('main_table.active', 1)
                 ->joinLocationDetails();
 
             $cutoffData = [];
+            $processedPairs = [];
 
             foreach ($relationCollection as $relation) {
+                $fromId = $relation->getLocationIdFrom();
+                $toId = $relation->getLocationIdTo();
+                $fromLocationName = $relation->getData('from_location_name');
                 $toLocationName = $relation->getData('to_location_name');
                 $cutoffDays = $relation->getCutoffDays();
                 $cutoffTime = $relation->getCutoffTime();
 
-                if ($toLocationName) {
+                // Create a unique key for this location pair (sorted to avoid duplicates)
+                $pairKey = min($fromId, $toId) . '-' . max($fromId, $toId);
+
+                // Skip if we already processed this pair
+                if (in_array($pairKey, $processedPairs)) {
+                    continue;
+                }
+
+                $processedPairs[] = $pairKey;
+
+                // Determine the other location (not the current one)
+                $otherLocationId = ($fromId == $locationId) ? $toId : $fromId;
+                $otherLocationName = ($fromId == $locationId) ? $toLocationName : $fromLocationName;
+
+                if ($otherLocationName) {
                     $formattedTime = '';
                     if ($cutoffTime) {
                         try {
@@ -361,7 +384,7 @@ class GetMapData
                     }
 
                     $cutoffData[] = [
-                        'to' => $relation->getLocationIdTo() . ' ' . $toLocationName,
+                        'to' => $otherLocationId . ' ' . $otherLocationName,
                         'days' => $cutoffDays ? (string)$cutoffDays : '',
                         'time' => $formattedTime
                     ];

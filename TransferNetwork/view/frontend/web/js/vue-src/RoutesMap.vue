@@ -15,14 +15,11 @@
                     <div class="map-legend-list-item rdc-inventory">
                         {{ t('RDC to TLC with RDC Inventory Visibility') }}
                     </div>
-                    <div class="map-legend-list-item rdc-replenishment">
-                        {{ t('RDC to TLC Replenishment Only') }}
-                    </div>
-                </div>
-                <div class="map-legend-list-column">
                     <div class="map-legend-list-item tlc-transfer">
                         {{ t('TLC to TLC Transfer') }}
                     </div>
+                </div>
+                <div class="map-legend-list-column">
                     <div class="map-legend-list-item port">
                         {{ t('Inbound Outbound Port') }}
                     </div>
@@ -137,11 +134,8 @@ export default {
                 marker.cluster = location.cluster;
                 marker.isTirehub = location.isTirehub;
 
-                // Create label below marker
-                const locationType = _.get(location, 'type', 'tlc');
-                if (_.toLower(locationType) === 'tlc') {
-                    this.createMarkerLabel(marker, location.id, location.isTirehub);
-                }
+                // Create TLC Number labels
+                this.createMarkerLabel(marker, location.id, location.isTirehub);
 
                 // Create info window
                 const infoWindow = new google.maps.InfoWindow({
@@ -194,10 +188,10 @@ export default {
         createInfoWindowContent (location) {
             return `
                 <div class="info-window">
-                    <div class="info-window-name">${location.name}</div>
+                    <div class="info-window-name">${location.id} ${location.name}</div>
                     <div class="info-window-content">
                         <div class="info-window-content-address">${location.address}</div>
-                        ${location.openingHours ? `
+                        ${location.openingHours.length ? `
                         <div class="info-window-content-hours">
                             <div class="hours-header">${this.t('Opening Hours:')}</div>
                             ${location.openingHours.map(hours => `
@@ -211,7 +205,7 @@ export default {
                         ${location.cutoff.length ? `
                             <div class="info-window-content-cutoff">
                                 <div class="cutoff-header">
-                                    <div>Transfer To Primary</div>
+                                    <div>Transfers From</div>
                                     <div>Days</div>
                                     <div>Cutoff</div>
                                 </div>
@@ -352,7 +346,7 @@ export default {
                 geodesic: false,
                 strokeColor: route.color,
                 strokeOpacity: 0.7,
-                strokeWeight: 2
+                strokeWeight: route.weight
             });
 
             // Store route info on polyline

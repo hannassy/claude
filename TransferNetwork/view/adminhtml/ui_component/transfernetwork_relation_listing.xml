@@ -17,6 +17,11 @@
                 <class>primary</class>
                 <label translate="true">Add New Relation</label>
             </button>
+            <button name="export">
+                <url path="*/*/export"/>
+                <class>action-secondary</class>
+                <label translate="true">Export to Excel</label>
+            </button>
         </buttons>
     </settings>
     <dataSource name="transfernetwork_relation_listing_data_source" component="Magento_Ui/js/grid/provider">
@@ -191,4 +196,22 @@
             </settings>
         </actionsColumn>
     </columns>
+    <modal name="relation_import_modal">
+        <argument name="data" xsi:type="array">
+            <item name="config" xsi:type="array">
+                <item name="component" xsi:type="string">uiComponent</item>
+            </item>
+        </argument>
+        <settings>
+            <options>
+                <option name="title" xsi:type="string" translate="true">Import Relations from Excel</option>
+            </options>
+        </settings>
+        <htmlContent name="import_content">
+            <argument name="block" xsi:type="object">Magento\Framework\View\Element\Template</argument>
+            <argument name="data" xsi:type="array">
+                <item name="template" xsi:type="string">Tirehub_TransferNetwork::relation/modal_content.phtml</item>
+            </argument>
+        </htmlContent>
+    </modal>
 </listing>
