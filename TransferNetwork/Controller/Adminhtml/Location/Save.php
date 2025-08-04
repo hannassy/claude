@@ -48,7 +48,7 @@ class Save extends Action
                 unset($data['entity_id']);
             }
 
-            $data = $this->processIconData($data);
+            $data = $this->processIconData($data, $model);
             $model->setData($data);
 
             try {
@@ -71,15 +71,32 @@ class Save extends Action
         return $resultRedirect->setPath('*/*/');
     }
 
-    private function processIconData(array $data): array
+    private function processIconData(array $data, $model): array
     {
-        if (!empty($data['icon'][0]['url'])) {
-            $iconUrl = $data['icon'][0]['url'];
-            $data['icon'] = $this->normalizeIconPath($iconUrl);
-        } elseif (!empty($data['icon'][0]['name']) && !empty($data['icon'][0]['tmp_name'])) {
-            $data['icon'] = $data['icon'][0]['url'] ?? '';
-        } else {
-            unset($data['icon']);
+        if (!array_key_exists('icon', $data)) {
+            if ($model->getId() && $model->getIcon()) {
+                $data['icon'] = null;
+            }
+            return $data;
+        }
+
+        $iconData = $data['icon'];
+
+        if (is_array($iconData)) {
+            if (empty($iconData)) {
+                $data['icon'] = null;
+            } elseif (isset($iconData['delete']) && $iconData['delete'] == '1') {
+                $data['icon'] = null;
+            } elseif (!empty($iconData[0]['url'])) {
+                $iconUrl = $iconData[0]['url'];
+                $data['icon'] = $this->normalizeIconPath($iconUrl);
+            } elseif (!empty($iconData[0]['name']) && !empty($iconData[0]['tmp_name'])) {
+                $data['icon'] = $iconData[0]['url'] ?? '';
+            } else {
+                $data['icon'] = null;
+            }
+        } elseif (is_string($iconData) && trim($iconData) === '') {
+            $data['icon'] = null;
         }
 
         return $data;

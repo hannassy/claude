@@ -27,7 +27,7 @@
         <column xsi:type="varchar" name="rdc_cluster" nullable="true" length="100" comment="RDC Cluster"/>
         <column xsi:type="int" name="color_id" unsigned="true" nullable="true" comment="Color ID"/>
         <column xsi:type="varchar" name="pin_color" nullable="true" comment="Pin color"/>
-        <column xsi:type="varchar" name="icon" length="1024" nullable="false" comment="Icon path"/>
+        <column xsi:type="varchar" name="icon" length="1024" nullable="true" comment="Icon path"/>
         <column xsi:type="boolean" name="is_tirehub" nullable="false" default="1" comment="Is TireHub Location"/>
         <column xsi:type="boolean" name="active" nullable="false" default="1" comment="Active Status"/>
         <column xsi:type="boolean" name="rdc_inventory_visible" nullable="false" default="0" comment="RDC Inventory Visible"/>

@@ -57,35 +57,13 @@ class DataProvider extends AbstractDataProvider
 
         if ($location && $location->getId()) {
             $itemData = $location->getData();
-            $itemData['icon'] = [];
-            $icon = $location->getData('icon');
-
-            if ($icon) {
-                $iconUrl = $this->getIconUrl($icon);
-                $itemData['icon'] = [[
-                    'name' => basename($icon),
-                    'url' => $iconUrl,
-                    'type' => 'image/' . pathinfo($icon, PATHINFO_EXTENSION),
-                ]];
-            }
-
+            $itemData['icon'] = $this->getIconFieldData($location->getData('icon'));
             $this->loadedData[$location->getId()] = $itemData;
         } else {
             $items = $this->collection->getItems();
             foreach ($items as $location) {
                 $itemData = $location->getData();
-                $itemData['icon'] = [];
-                $icon = $location->getData('icon');
-
-                if ($icon) {
-                    $iconUrl = $this->getIconUrl($icon);
-                    $itemData['icon'] = [[
-                        'name' => basename($icon),
-                        'url' => $iconUrl,
-                        'type' => 'image/' . pathinfo($icon, PATHINFO_EXTENSION),
-                    ]];
-                }
-
+                $itemData['icon'] = $this->getIconFieldData($location->getData('icon'));
                 $this->loadedData[$location->getId()] = $itemData;
             }
         }
@@ -93,7 +71,26 @@ class DataProvider extends AbstractDataProvider
         return $this->loadedData;
     }
 
-    private function getIconUrl(string $iconPath): string
+    private function getIconFieldData(?string $iconPath): array
+    {
+        if (!$iconPath) {
+            return [];
+        }
+
+        $iconUrl = $this->getIconUrl($iconPath);
+        if (!$iconUrl) {
+            return [];
+        }
+
+        return [[
+            'name' => basename($iconPath),
+            'url' => $iconUrl,
+            'type' => 'image/' . pathinfo($iconPath, PATHINFO_EXTENSION),
+            'size' => 0
+        ]];
+    }
+
+    private function getIconUrl(string $iconPath): ?string
     {
         try {
             $baseMediaUrl = $this->storeManager->getStore()->getBaseUrl(UrlInterface::URL_TYPE_MEDIA);
@@ -112,7 +109,7 @@ class DataProvider extends AbstractDataProvider
 
             return rtrim($baseMediaUrl, '/') . $iconPath;
         } catch (\Exception $e) {
-            return $iconPath;
+            return null;
         }
     }
 
