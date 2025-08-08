@@ -130,6 +130,14 @@
                 <sortable>false</sortable>
             </settings>
         </actionsColumn>
+        <actionsColumn name="cxml_response" class="Tirehub\Punchout\Ui\Component\Listing\Column\CxmlResponse">
+            <settings>
+                <indexField>entity_id</indexField>
+                <label translate="true">cXML Response</label>
+                <draggable>false</draggable>
+                <sortable>false</sortable>
+            </settings>
+        </actionsColumn>
         <column name="created_at" class="Magento\Ui\Component\Listing\Columns\Date">
             <settings>
                 <filter>dateRange</filter>
@@ -180,6 +188,37 @@
                     <item name="externalProvider" xsi:type="string">cxml_content.cxml_content_data_source</item>
                     <item name="loading" xsi:type="boolean">false</item>
                     <item name="ajaxUrl" xsi:type="url" path="punchout/session/getcxml"/>
+                </item>
+            </argument>
+        </insertListing>
+    </modal>
+
+    <!-- Modal for displaying cXML response -->
+    <modal name="cxml_response_modal">
+        <settings>
+            <options>
+                <option name="title" xsi:type="string" translate="true">cXML Response Details</option>
+                <option name="buttons" xsi:type="array">
+                    <item name="0" xsi:type="array">
+                        <item name="text" xsi:type="string" translate="true">Close</item>
+                        <item name="class" xsi:type="string">action-primary</item>
+                        <item name="actions" xsi:type="array">
+                            <item name="0" xsi:type="string">closeModal</item>
+                        </item>
+                    </item>
+                </option>
+            </options>
+        </settings>
+        <insertListing name="cxml_response_content">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="component" xsi:type="string">Tirehub_Punchout/js/grid/cxml-response-content</item>
+                    <item name="autoRender" xsi:type="boolean">false</item>
+                    <item name="dataScope" xsi:type="string">cxml_response_content</item>
+                    <item name="namespace" xsi:type="string">cxml_response_content</item>
+                    <item name="externalProvider" xsi:type="string">cxml_response_content.cxml_response_content_data_source</item>
+                    <item name="loading" xsi:type="boolean">false</item>
+                    <item name="ajaxUrl" xsi:type="url" path="punchout/session/getcxmlresponse"/>
                 </item>
             </argument>
         </insertListing>

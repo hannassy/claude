@@ -50,11 +50,9 @@ class PlaceOrder
             $session = $this->sessionFactory->create();
             $session->load($buyerCookie, 'buyer_cookie');
 
-            // Get client type to determine formatting
             $corpAddressId = $session->getData(SessionInterface::CORP_ADDRESS_ID);
-
-            // Get browser form post URL from session
             $browserFormPostUrl = $session->getData(SessionInterface::BROWSER_FORM_POST_URL);
+
             if (empty($browserFormPostUrl)) {
                 $this->logger->error('Punchout: Missing browser_form_post_url in session');
                 throw new \Exception('Missing browser_form_post_url');
@@ -66,7 +64,6 @@ class PlaceOrder
                 'browser_form_post_url' => $browserFormPostUrl
             ], $buyerCookie);
 
-            // Get partner settings
             $partner = $this->getPartner($corpAddressId);
 
             if (!$partner) {
@@ -75,40 +72,49 @@ class PlaceOrder
                 ], $buyerCookie);
             }
 
-            // Generate cXML document
             $cxml = $this->generateCxml($order, $session, $partner);
 
-            $log->logInfo('Generated cXML document', [
-                'cxml_length' => strlen($cxml)
-            ], $buyerCookie);
-
-            // Prepare browser post form data
             $formData = [
                 'cxml-urlencoded' => rawurlencode($cxml),
                 'cxml-base64' => base64_encode($cxml),
                 'browser_form_post_url' => $browserFormPostUrl
             ];
 
-            try {
-                // Update session status to completed
-                $session->setData(SessionInterface::STATUS, SessionInterface::STATUS_COMPLETED);
+            $log->logInfo('Generated cXML response document', [
+                'cxml_length' => strlen($cxml),
+                'cxml_urlencoded_length' => strlen($formData['cxml-urlencoded']),
+                'cxml_base64_length' => strlen($formData['cxml-base64']),
+                'browser_form_post_url' => $browserFormPostUrl,
+                'partner_identity' => $partner['identity'] ?? 'unknown',
+                'partner_domain' => $partner['domain'] ?? 'unknown'
+            ], $buyerCookie);
 
-                // Optionally link the order to the session for reference
+            $log->logDebug('Complete cXML response data', [
+                'cxml_document' => $cxml,
+                'cxml_urlencoded' => $formData['cxml-urlencoded'],
+                'cxml_base64' => $formData['cxml-base64'],
+                'form_data' => $formData
+            ], $buyerCookie);
+
+            try {
+                $session->setData(SessionInterface::STATUS, SessionInterface::STATUS_COMPLETED);
+                $session->setData('cxml_response', $cxml);
+                $session->setData('cxml_response_urlencoded', $formData['cxml-urlencoded']);
+                $session->setData('cxml_response_base64', $formData['cxml-base64']);
+
                 if ($order->getId()) {
                     $session->setData(SessionInterface::ERP_ORDER_NUMBER, $order->getErpOrderNumber());
                 }
 
-                // Save the updated session
                 $this->sessionResource->save($session);
 
-                $log->logInfo('Session updated to completed status', [
+                $log->logInfo('Session updated with response data', [
                     'session_id' => $session->getId(),
-                    'erp_order_number' => $order->getErpOrderNumber()
+                    'erp_order_number' => $order->getErpOrderNumber(),
+                    'cxml_response_saved' => true
                 ], $buyerCookie);
 
                 $this->disablePunchoutMode->execute();
-
-                // Log out the customer
                 $this->customerSession->logout();
 
                 $log->logInfo('Punchout session completed, customer logged out', [], $buyerCookie);
@@ -123,7 +129,6 @@ class PlaceOrder
                     'error' => $e->getMessage()
                 ], $buyerCookie);
 
-                // Still return form data even if status update fails
                 return $formData;
             }
         } catch (\Exception $e) {
@@ -158,29 +163,23 @@ class PlaceOrder
         $currentDate = $this->timezone->date()->format('Y-m-d\TH:i:s.uP');
         $payloadId = uniqid() . '@tirehub';
 
-        // Format XML
         $xml = new \SimpleXMLElement('<?xml version="1.0" encoding="utf-8"?><!DOCTYPE cXML SYSTEM "http://xml.cXML.org/schemas/cXML/1.2.041/cXML.dtd"><cXML></cXML>');
 
-        // Add cXML attributes
         $xml->addAttribute('payloadID', $payloadId);
         $xml->addAttribute('timestamp', $currentDate);
 
-        // Add header
         $header = $xml->addChild('Header');
 
-        // From section
         $from = $header->addChild('From');
         $fromCredential = $from->addChild('Credential');
         $fromCredential->addAttribute('domain', 'DUNS');
         $fromCredential->addChild('Identity', '08-125-4817');
 
-        // To section
         $to = $header->addChild('To');
         $toCredential = $to->addChild('Credential');
         $toCredential->addAttribute('domain', 'DUNS');
         $toCredential->addChild('Identity', $partner['identity'] ?? '');
 
-        // Sender section
         $sender = $header->addChild('Sender');
         $senderCredential = $sender->addChild('Credential');
         $senderCredential->addAttribute('domain', 'DUNS');
@@ -190,16 +189,12 @@ class PlaceOrder
         }
         $sender->addChild('UserAgent', 'TireHub Transactional Middleware');
 
-        // Add message
         $message = $xml->addChild('Message');
         $message->addAttribute('deploymentMode', 'production');
 
         $punchOutOrderMessage = $message->addChild('PunchOutOrderMessage');
-
-        // Add buyer cookie
         $punchOutOrderMessage->addChild('BuyerCookie', $punchoutSession->getData('buyer_cookie'));
 
-        // Add header with total
         $punchOutOrderMessageHeader = $punchOutOrderMessage->addChild('PunchOutOrderMessageHeader');
         $punchOutOrderMessageHeader->addAttribute('operationAllowed', 'create');
 
@@ -207,31 +202,26 @@ class PlaceOrder
         $totalMoney = $total->addChild('Money', number_format((float)$order->getGrandTotal(), 2, '.', ''));
         $totalMoney->addAttribute('currency', $order->getQuoteCurrencyCode() ?: 'USD');
 
-        // Add items
         $lineNumber = 1;
         foreach ($order->getAllItems() as $item) {
             if ($item->getParentItemId()) {
-                continue; // Skip child items of configurable/bundle products
+                continue;
             }
 
             $itemIn = $punchOutOrderMessage->addChild('ItemIn');
             $itemIn->addAttribute('quantity', (string)(int)$item->getQtyOrdered());
             $itemIn->addAttribute('lineNumber', (string)$lineNumber);
 
-            // Add item ID
             $itemId = $itemIn->addChild('ItemID');
             $itemId->addChild('SupplierPartID', $item->getSku());
 
-            // Add temppo if available
             $temppo = $punchoutSession->getData('temppo');
             if ($temppo) {
                 $itemId->addChild('SupplierPartAuxiliaryID', $temppo);
             }
 
-            // Add item detail
             $itemDetail = $itemIn->addChild('ItemDetail');
 
-            // Add unit price
             $unitPrice = $itemDetail->addChild('UnitPrice');
             $unitPriceMoney = $unitPrice->addChild('Money', number_format($item->getPrice(), 2, '.', ''));
             $unitPriceMoney->addAttribute('currency', $order->getQuoteCurrencyCode() ?: 'USD');
