@@ -20,16 +20,6 @@ class Punchout implements ArgumentInterface
         return $this->isPunchoutMode->execute();
     }
 
-    public function getPunchoutSessionId(): ?string
-    {
-        // Get buyer cookie from session if in punchout mode
-        if ($this->isPunchoutMode()) {
-            return $this->customerSession->getData('buyer_cookie');
-        }
-
-        return null;
-    }
-
     public function getPunchoutRedirectUrl(): string
     {
         // You can determine the redirect URL based on various conditions

@@ -15,6 +15,14 @@
                     <label>Show Quotes Menu</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                 </field>
+                <field id="allowed_store_selector" translate="label comment" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Allowed Store Selector For</label>
+                    <comment>Partners identity, comma separated</comment>
+                </field>
+                <field id="force_select_location" translate="label comment" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Force Select Location</label>
+                    <comment>Partners identity, comma separated</comment>
+                </field>
             </group>
             <group id="customer" translate="label" type="text" sortOrder="200" showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>Customer Settings</label>

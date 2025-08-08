@@ -22,6 +22,26 @@ class Config
         return (bool)$this->scopeConfig->getValue('punchout/general/is_show_quotes_menu');
     }
 
+    public function isAllowedStoreSelector(string $partnerIdentity): bool
+    {
+        $identities = (string)$this->scopeConfig->getValue('punchout/general/allowed_store_selector');
+        $identities = explode(',', $identities);
+        $identities = array_map('trim', $identities);
+        $identities = array_map('strtolower', $identities);
+
+        return in_array(strtolower($partnerIdentity), $identities);
+    }
+
+    public function isForceSelectLocation(string $partnerIdentity): bool
+    {
+        $identities = (string)$this->scopeConfig->getValue('punchout/general/force_select_location');
+        $identities = explode(',', $identities);
+        $identities = array_map('trim', $identities);
+        $identities = array_map('strtolower', $identities);
+
+        return in_array(strtolower($partnerIdentity), $identities);
+    }
+
     public function getCustomerEmailTemplate(): string
     {
         return (string)$this->scopeConfig->getValue('punchout/customer/email_template');

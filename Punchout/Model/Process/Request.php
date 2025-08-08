@@ -16,6 +16,7 @@ use Tirehub\Punchout\Model\ResourceModel\Session as SessionResource;
 use Tirehub\Punchout\Service\GetPunchoutPartnersManagement;
 use Tirehub\Punchout\Service\TokenGenerator;
 use Tirehub\Punchout\Model\LogFactory;
+use Tirehub\Punchout\Model\Config;
 
 class Request
 {
@@ -30,7 +31,8 @@ class Request
         private readonly TokenGenerator $tokenGenerator,
         private readonly Monolog $logger,
         private readonly GetPunchoutPartnersManagement $getPunchoutPartnersManagement,
-        private readonly LogFactory $logFactory
+        private readonly LogFactory $logFactory,
+        private readonly Config $config
     ) {
     }
 
@@ -56,7 +58,6 @@ class Request
                     'sender_identity' => $parsedData['sender']['identity'] ?? '',
                     'has_address_id' => !empty($parsedData['address_id'])
                 ], $buyerCookie);
-
             } catch (LocalizedException $e) {
                 if (str_contains($e->getMessage(), 'Security violation: This buyer cookie has already been used')) {
                     $this->logger->warning('Punchout: Security violation - buyer cookie reuse detected');
@@ -108,6 +109,23 @@ class Request
             if (!$addressId) {
                 $this->logger->info('Punchout: No valid addressID found, redirecting to portal');
                 $log->logInfo('No valid addressID found, redirecting to portal', [
+                    'session_id' => $session->getId()
+                ], $buyerCookie);
+
+                $portalUrl = $this->tokenGenerator->generatePortalUrl($buyerCookie);
+
+                $result = $this->rawFactory->create();
+                $responseXml = $this->cxmlProcessor->generateSuccessResponse($portalUrl);
+
+                $result->setHeader('Content-Type', self::CONTENT_TYPE_TEXT_XML);
+                $result->setContents($responseXml);
+
+                return $result;
+            }
+
+            if ($this->config->isForceSelectLocation($identity)) {
+                $this->logger->info('Punchout: Forcelly redirecting to portal');
+                $log->logInfo('Forcelly redirecting to portal', [
                     'session_id' => $session->getId()
                 ], $buyerCookie);
 

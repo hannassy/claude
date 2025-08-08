@@ -7,7 +7,7 @@
                 <argument name="punchout_view_model" xsi:type="object">Tirehub\Punchout\ViewModel\Punchout</argument>
             </arguments>
         </referenceBlock>
-        <referenceBlock name="navigation-account">
+        <referenceBlock name="navigation-store">
             <arguments>
                 <argument name="punchout_view_model" xsi:type="object">Tirehub\Punchout\ViewModel\Punchout</argument>
             </arguments>
