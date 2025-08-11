@@ -177,7 +177,7 @@ class PlaceOrder
 
         $to = $header->addChild('To');
         $toCredential = $to->addChild('Credential');
-        $toCredential->addAttribute('domain', 'DUNS');
+        $toCredential->addAttribute('domain', $partner['domain'] ?? 'DUNS');
         $toCredential->addChild('Identity', $partner['identity'] ?? '');
 
         $sender = $header->addChild('Sender');
@@ -202,6 +202,11 @@ class PlaceOrder
         $totalMoney = $total->addChild('Money', number_format((float)$order->getGrandTotal(), 2, '.', ''));
         $totalMoney->addAttribute('currency', $order->getQuoteCurrencyCode() ?: 'USD');
 
+        $temppo = $punchoutSession->getData('temppo');
+        if (!$temppo) {
+            throw new \Exception('Missing temppo in session data');
+        }
+
         $lineNumber = 1;
         foreach ($order->getAllItems() as $item) {
             if ($item->getParentItemId()) {
@@ -214,11 +219,7 @@ class PlaceOrder
 
             $itemId = $itemIn->addChild('ItemID');
             $itemId->addChild('SupplierPartID', $item->getSku());
-
-            $temppo = $punchoutSession->getData('temppo');
-            if ($temppo) {
-                $itemId->addChild('SupplierPartAuxiliaryID', $temppo);
-            }
+            $itemId->addChild('SupplierPartAuxiliaryID', $temppo);
 
             $itemDetail = $itemIn->addChild('ItemDetail');
 
