@@ -8,7 +8,13 @@ define([
         return target.extend({
             initialize: function () {
                 this._super();
-                this.addImportButton();
+
+                // Only add import button for relation grid - ADD THIS CHECK
+                if (this.ns === 'transfernetwork_relation_listing' &&
+                    window.location.href.includes('transfernetwork/relation')) {
+                    this.addImportButton();
+                }
+
                 return this;
             },
 
