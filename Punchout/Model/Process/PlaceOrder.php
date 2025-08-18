@@ -75,15 +75,13 @@ class PlaceOrder
             $cxml = $this->generateCxml($order, $session, $partner);
 
             $formData = [
-                'cxml-urlencoded' => rawurlencode($cxml),
-                'cxml-base64' => base64_encode($cxml),
-                'browser_form_post_url' => $browserFormPostUrl
+                rawurlencode($cxml),
+                $browserFormPostUrl
             ];
 
             $log->logInfo('Generated cXML response document', [
                 'cxml_length' => strlen($cxml),
-                'cxml_urlencoded_length' => strlen($formData['cxml-urlencoded']),
-                'cxml_base64_length' => strlen($formData['cxml-base64']),
+                'cxml_urlencoded_length' => strlen($formData[0]),
                 'browser_form_post_url' => $browserFormPostUrl,
                 'partner_identity' => $partner['identity'] ?? 'unknown',
                 'partner_domain' => $partner['domain'] ?? 'unknown'
@@ -91,16 +89,15 @@ class PlaceOrder
 
             $log->logDebug('Complete cXML response data', [
                 'cxml_document' => $cxml,
-                'cxml_urlencoded' => $formData['cxml-urlencoded'],
-                'cxml_base64' => $formData['cxml-base64'],
+                'cxml_urlencoded' => $formData[0],
                 'form_data' => $formData
             ], $buyerCookie);
 
             try {
                 $session->setData(SessionInterface::STATUS, SessionInterface::STATUS_COMPLETED);
                 $session->setData('cxml_response', $cxml);
-                $session->setData('cxml_response_urlencoded', $formData['cxml-urlencoded']);
-                $session->setData('cxml_response_base64', $formData['cxml-base64']);
+                $session->setData('cxml_response_urlencoded', $formData[0]);  // Store URL encoded
+                $session->setData('cxml_response_base64', base64_encode($cxml));  // Store base64 for debugging
 
                 if ($order->getId()) {
                     $session->setData(SessionInterface::ERP_ORDER_NUMBER, $order->getErpOrderNumber());
@@ -117,11 +114,7 @@ class PlaceOrder
                 $this->disablePunchoutMode->execute();
                 $this->customerSession->logout();
 
-                $log->logInfo('Punchout session completed, customer logged out', [], $buyerCookie);
-
-                $this->logger->info("Punchout: Session {$session->getId()} marked as completed for order {$order->getErpOrderNumber()}");
-
-                return $formData;
+                return $formData;  // Return the modified structure
             } catch (\Exception $e) {
                 $this->logger->error("Punchout: Error updating session status: {$e->getMessage()}");
 
