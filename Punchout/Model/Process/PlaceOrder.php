@@ -19,6 +19,7 @@ use Tirehub\Punchout\Model\LogFactory;
 class PlaceOrder
 {
     private const CLASSIFICATION = '25172504';
+    private const CLASSIFICATION_DOMAIN = 'UNSPSC';
 
     public function __construct(
         private readonly TimezoneInterface $timezone,
@@ -96,8 +97,8 @@ class PlaceOrder
             try {
                 $session->setData(SessionInterface::STATUS, SessionInterface::STATUS_COMPLETED);
                 $session->setData('cxml_response', $cxml);
-                $session->setData('cxml_response_urlencoded', $formData[0]);  // Store URL encoded
-                $session->setData('cxml_response_base64', base64_encode($cxml));  // Store base64 for debugging
+                $session->setData('cxml_response_urlencoded', $formData[0]);
+                $session->setData('cxml_response_base64', base64_encode($cxml));
 
                 if ($order->getId()) {
                     $session->setData(SessionInterface::ERP_ORDER_NUMBER, $order->getErpOrderNumber());
@@ -114,7 +115,7 @@ class PlaceOrder
                 $this->disablePunchoutMode->execute();
                 $this->customerSession->logout();
 
-                return $formData;  // Return the modified structure
+                return $formData;
             } catch (\Exception $e) {
                 $this->logger->error("Punchout: Error updating session status: {$e->getMessage()}");
 
@@ -170,7 +171,7 @@ class PlaceOrder
 
         $to = $header->addChild('To');
         $toCredential = $to->addChild('Credential');
-        $toCredential->addAttribute('domain', $partner['domain'] ?? 'DUNS');
+        $toCredential->addAttribute('domain', 'DUNS');
         $toCredential->addChild('Identity', $partner['identity'] ?? '');
 
         $sender = $header->addChild('Sender');
@@ -220,12 +221,17 @@ class PlaceOrder
             $unitPriceMoney = $unitPrice->addChild('Money', number_format($item->getPrice(), 2, '.', ''));
             $unitPriceMoney->addAttribute('currency', $order->getQuoteCurrencyCode() ?: 'USD');
 
-            $brand = $this->getProductBrandService->execute($item->getProduct());
-
             $itemDetail->addChild('Description', $item->getName());
+
+            $itemDetail->addChild('UnitOfMeasure', 'EA');
+
             $itemDetail->addChild('ManufacturerPartID', $item->getSku());
+
+            $brand = $this->getProductBrandService->execute($item->getProduct());
             $itemDetail->addChild('ManufacturerName', $brand);
-            $itemDetail->addChild('Classification', self::CLASSIFICATION);
+
+            $classification = $itemDetail->addChild('Classification', self::CLASSIFICATION);
+            $classification->addAttribute('domain', self::CLASSIFICATION_DOMAIN);
 
             $lineNumber++;
         }
