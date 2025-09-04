@@ -1,0 +1,24 @@
+<?xml version="1.0" ?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <preference for="Tirehub\BubbleHint\Api\HintRepositoryInterface" type="Tirehub\BubbleHint\Model\HintRepository"/>
+    <preference for="Tirehub\BubbleHint\Api\Data\HintInterface" type="Tirehub\BubbleHint\Model\Hint"/>
+    <preference for="Tirehub\BubbleHint\Api\Data\HintSearchResultsInterface" type="Magento\Framework\Api\SearchResults"/>
+    <preference for="Tirehub\BubbleHint\Api\HintSeenRepositoryInterface" type="Tirehub\BubbleHint\Model\HintSeenRepository"/>
+    <preference for="Tirehub\BubbleHint\Api\Data\HintSeenInterface" type="Tirehub\BubbleHint\Model\HintSeen"/>
+    <preference for="Tirehub\BubbleHint\Api\Data\HintSeenSearchResultsInterface" type="Magento\Framework\Api\SearchResults"/>
+    <preference for="Tirehub\BubbleHint\Api\Data\GetCustomerNotSeenHintInterface" type="Tirehub\BubbleHint\Service\GetCustomerNotSeenHint"/>
+
+    <virtualType name="Tirehub\BubbleHint\Model\ResourceModel\BubbleHint\Grid\Collection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">tirehub_bubblehint</argument>
+            <argument name="resourceModel" xsi:type="string">Tirehub\BubbleHint\Model\ResourceModel\Hint\Collection</argument>
+        </arguments>
+    </virtualType>
+    <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
+        <arguments>
+            <argument name="collections" xsi:type="array">
+                <item name="tirehub_bubblehint_listing_data_source" xsi:type="string">Tirehub\BubbleHint\Model\ResourceModel\BubbleHint\Grid\Collection</item>
+            </argument>
+        </arguments>
+    </type>
+</config>

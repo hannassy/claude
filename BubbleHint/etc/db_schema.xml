@@ -1,0 +1,29 @@
+<?xml version="1.0" ?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+    <table name="tirehub_bubblehint" resource="default" engine="innodb" comment="tirehub_bubblehint Table">
+        <column xsi:type="int" name="hint_id" unsigned="true" nullable="false" identity="true" comment="Hint Id"/>
+        <column xsi:type="varchar" name="name" length="100" nullable="false" comment="Name"/>
+        <column xsi:type="varchar" name="text" length="500" nullable="false" comment="Text"/>
+        <column xsi:type="int" name="is_active" nullable="false" default="1" comment="Is Active"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="hint_id"/>
+        </constraint>
+    </table>
+
+    <table name="tirehub_bubblehint_seen" resource="default" engine="innodb" comment="tirehub_bubblehint_seen Table">
+        <column xsi:type="int" name="hint_seen_id" unsigned="true" identity="true" nullable="false" comment="Hint Seen Id"/>
+        <column xsi:type="int" name="customer_id" unsigned="true" nullable="false" comment="Customer Id"/>
+        <column xsi:type="int" name="hint_id" unsigned="true" nullable="false" comment="Hint Id"/>
+        <column xsi:type="int" name="seen_count" unsigned="true" nullable="false" default="0" comment="Seen count"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="hint_seen_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="TIREHUB_BUBBLEHINT_CUSTOMER_ID_HINT_ID">
+            <column name="customer_id"/>
+            <column name="hint_id"/>
+        </constraint>
+        <index referenceId="TIREHUB_BUBBLEHINT_CUSTOMER_ID" indexType="btree">
+            <column name="customer_id"/>
+        </index>
+    </table>
+</schema>

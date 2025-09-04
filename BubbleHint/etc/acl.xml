@@ -1,0 +1,16 @@
+<?xml version="1.0" ?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Acl/etc/acl.xsd">
+    <acl>
+        <resources>
+            <resource id="Magento_Backend::admin">
+                <resource id="Tirehub_Utility::TireHub">
+                    <resource id="Tirehub_BubbleHint::Hint" title="Bubble Hints" sortOrder="20">
+                        <resource id="Tirehub_BubbleHint::Hint_save" title="Save Hint" sortOrder="10"/>
+                        <resource id="Tirehub_BubbleHint::Hint_update" title="Update Hint" sortOrder="20"/>
+                        <resource id="Tirehub_BubbleHint::Hint_view" title="View Hint" sortOrder="30"/>
+                    </resource>
+                </resource>
+            </resource>
+        </resources>
+    </acl>
+</config>
