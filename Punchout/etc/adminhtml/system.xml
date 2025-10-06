@@ -7,6 +7,10 @@
             <resource>Tirehub_Punchout::punchout</resource>
             <group id="general" translate="label" type="text" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>General Settings</label>
+                <field id="enabled" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enabled</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
                 <field id="is_show_programs_menu" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Show Programs Menu</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
@@ -14,10 +18,6 @@
                 <field id="is_show_quotes_menu" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Show Quotes Menu</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                </field>
-                <field id="allowed_store_selector" translate="label comment" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>Allowed Store Selector For</label>
-                    <comment>Partners identity, comma separated</comment>
                 </field>
                 <field id="force_select_location" translate="label comment" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Force Select Location</label>

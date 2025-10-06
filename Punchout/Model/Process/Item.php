@@ -13,15 +13,14 @@ use Tirehub\Punchout\Model\ItemFactory;
 use Tirehub\Punchout\Model\SessionFactory;
 use Tirehub\Punchout\Model\ResourceModel\Session as SessionResource;
 use Tirehub\Punchout\Service\GetPunchoutPartnersManagement;
-use Tirehub\Punchout\Service\ExtractAddressId;
 use Magento\Framework\Logger\Monolog;
 use Tirehub\Punchout\Model\Config;
 use Tirehub\Punchout\Model\LogFactory;
+use Tirehub\ApiMiddleware\Api\Request\LookupDealersInterface;
+use Exception;
 
 class Item
 {
-    private bool $debugItemRedirectUrl = true;
-
     public function __construct(
         private readonly RawFactory $rawFactory,
         private readonly RedirectFactory $redirectFactory,
@@ -29,7 +28,7 @@ class Item
         private readonly SessionResource $sessionResource,
         private readonly ItemFactory $itemFactory,
         private readonly GetPunchoutPartnersManagement $getPunchoutPartnersManagement,
-        private readonly ExtractAddressId $extractAddressId,
+        private readonly LookupDealersInterface $lookupDealers,
         private readonly Monolog $logger,
         private readonly Config $config,
         private readonly LogFactory $logFactory
@@ -43,10 +42,10 @@ class Item
 
         try {
             // Get required parameters
-            $partnerIdentity = $request->getParam('partnerIdentity');
-            $dealerCode = $request->getParam('dealerCode');
-            $itemId = $request->getParam('itemId');
-            $quantityNeeded = (int)$request->getParam('quantityNeeded', 1);
+            $partnerIdentity = $request->getParam('partnerIdentity') ?? $request->getParam('PartnerIdentity');
+            $dealerCode = $request->getParam('dealerCode') ?? $request->getParam('DealerCode');
+            $itemId = $request->getParam('itemId') ?? $request->getParam('ItemId');
+            $quantityNeeded = (int)($request->getParam('quantityNeeded') ?? (int)$request->getParam('QuantityNeeded'));
 
             // Validate required parameters
             if (empty($partnerIdentity) || empty($dealerCode)) {
@@ -61,7 +60,7 @@ class Item
             ]);
 
             // Validate dealer code
-            $dealerCode = $this->extractAddressId->execute($dealerCode, $partnerIdentity);
+            $dealerCode = $this->getValidDealerCode($dealerCode, $partnerIdentity);
             if (!$dealerCode) {
                 throw new LocalizedException(__('Invalid dealer code or partner identity'));
             }
@@ -165,6 +164,19 @@ class Item
             $result->setContents(json_encode(['error' => 'Internal server error']));
             $result->setHeader('Content-Type', 'application/json');
             return $result;
+        }
+    }
+
+    private function getValidDealerCode(string $dealerCode): ?string
+    {
+        try {
+            $result = $this->lookupDealers->execute(['dealerCode' => $dealerCode]);
+            $exists =  $result['results'][0]['shipToLocation']['locationId'] ?? null;
+            
+            return $exists ? $dealerCode : null;
+        } catch (Exception $e) {
+            $this->logger->error('Punchout: Error in validateDealerExists on items of interests: ' . $e->getMessage());
+            return null;
         }
     }
 

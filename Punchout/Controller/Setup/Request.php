@@ -15,6 +15,7 @@ use Tirehub\Punchout\Model\CxmlProcessor;
 use Throwable;
 use Tirehub\Punchout\Api\DisablePunchoutModeInterface;
 use Tirehub\Punchout\Service\ContextCleaner;
+use Tirehub\Punchout\Model\Config;
 
 class Request implements HttpPostActionInterface, CsrfAwareActionInterface
 {
@@ -25,7 +26,8 @@ class Request implements HttpPostActionInterface, CsrfAwareActionInterface
         private readonly CxmlProcessor $cxmlProcessor,
         private readonly Monolog $logger,
         private readonly DisablePunchoutModeInterface $disablePunchoutMode,
-        private readonly ContextCleaner $contextCleaner
+        private readonly ContextCleaner $contextCleaner,
+        private readonly Config $config
     ) {
     }
 
@@ -38,6 +40,10 @@ class Request implements HttpPostActionInterface, CsrfAwareActionInterface
     {
         try {
             $this->logger->info('Punchout: Processing setup request');
+
+            if (!$this->config->isEnabled()) {
+                throw new \Exception('Punchout is not enabled');
+            }
 
             $this->disablePunchoutMode->execute();
             $this->contextCleaner->execute();

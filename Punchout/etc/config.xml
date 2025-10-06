@@ -3,10 +3,9 @@
 	<default>
 		<punchout>
 			<general>
-				<enabled>1</enabled>
+				<enabled>0</enabled>
 				<is_show_programs_menu>0</is_show_programs_menu>
 				<is_show_quotes_menu>0</is_show_quotes_menu>
-				<allowed_store_selector>Hertz</allowed_store_selector>
 				<force_select_location>Hertz</force_select_location>
 			</general>
 			<customer>

@@ -6,6 +6,7 @@
     <preference for="Tirehub\Punchout\Api\DisablePunchoutModeInterface" type="Tirehub\Punchout\Service\DisablePunchoutMode"/>
     <preference for="Tirehub\Punchout\Api\CreateCustomerInterface" type="Tirehub\Punchout\Service\CreateCustomer"/>
     <preference for="Tirehub\Punchout\Api\GetTempPoInterface" type="Tirehub\Punchout\Service\GetTempPo"/>
+    <preference for="Tirehub\Punchout\Api\GetCustomerReferenceNumberInterface" type="Tirehub\Punchout\Service\GetCustomerReferenceNumber"/>
 
     <!-- Token generator service configuration -->
     <type name="Tirehub\Punchout\Service\TokenGenerator">

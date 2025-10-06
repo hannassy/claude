@@ -110,16 +110,16 @@ class ExtractAddressId
             $formattedAddressId = substr($addressId, 1, 4);
         }
 
+        // Remove existing dealer prefix if present
+        $formattedAddressId = str_replace($dealerPrefix, '', $formattedAddressId);
+
         // Special formatting for CarMax
         if (strtolower($senderIdentity) === 'carmax') {
             // For CarMax: use only 4 characters if address is greater then 6 characters start from 2nd
-            if (strlen($addressId) >= 6) {
+            if (strlen($formattedAddressId) >= 6) {
                 $formattedAddressId = substr($addressId, 1, 4);
             }
         }
-
-        // Remove existing dealer prefix if present
-        $formattedAddressId = str_replace($dealerPrefix, '', $formattedAddressId);
 
         // Apply dealer prefix if configured
         if ($dealerPrefix) {

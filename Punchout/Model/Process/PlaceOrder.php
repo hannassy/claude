@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Tirehub\Punchout\Model\Process;
 
+use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Stdlib\DateTime\TimezoneInterface;
 use Magento\Sales\Model\Order;
 use Psr\Log\LoggerInterface;
@@ -76,13 +77,13 @@ class PlaceOrder
             $cxml = $this->generateCxml($order, $session, $partner);
 
             $formData = [
-                rawurlencode($cxml),
+                $cxml,
                 $browserFormPostUrl
             ];
 
             $log->logInfo('Generated cXML response document', [
                 'cxml_length' => strlen($cxml),
-                'cxml_urlencoded_length' => strlen($formData[0]),
+                'cxml_urlencoded_length' => strlen(rawurlencode($cxml)),
                 'browser_form_post_url' => $browserFormPostUrl,
                 'partner_identity' => $partner['identity'] ?? 'unknown',
                 'partner_domain' => $partner['domain'] ?? 'unknown'
@@ -90,14 +91,14 @@ class PlaceOrder
 
             $log->logDebug('Complete cXML response data', [
                 'cxml_document' => $cxml,
-                'cxml_urlencoded' => $formData[0],
+                'cxml_urlencoded' => rawurlencode($cxml),
                 'form_data' => $formData
             ], $buyerCookie);
 
             try {
                 $session->setData(SessionInterface::STATUS, SessionInterface::STATUS_COMPLETED);
                 $session->setData('cxml_response', $cxml);
-                $session->setData('cxml_response_urlencoded', $formData[0]);
+                $session->setData('cxml_response_urlencoded', rawurlencode($cxml));
                 $session->setData('cxml_response_base64', base64_encode($cxml));
 
                 if ($order->getId()) {
@@ -152,10 +153,13 @@ class PlaceOrder
         return null;
     }
 
+    /**
+     * @throws LocalizedException
+     */
     private function generateCxml(Order $order, PunchoutSession $punchoutSession, ?array $partner): string
     {
         $currentDate = $this->timezone->date()->format('Y-m-d\TH:i:s.uP');
-        $payloadId = uniqid() . '@tirehub';
+        $payloadId = $punchoutSession->getData('payload_id');
 
         $xml = new \SimpleXMLElement('<?xml version="1.0" encoding="utf-8"?><!DOCTYPE cXML SYSTEM "http://xml.cXML.org/schemas/cXML/1.2.041/cXML.dtd"><cXML></cXML>');
 
