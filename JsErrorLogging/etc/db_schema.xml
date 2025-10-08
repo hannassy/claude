@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+    <table name="tirehub_jserror_logging" resource="default" engine="innodb">
+        <column xsi:type="int" name="entity_id" unsigned="true" nullable="false" identity="true" comment="Entity ID"/>
+        <column xsi:type="varchar" name="error_message" nullable="false" length="500" comment="Error Message"/>
+        <column xsi:type="text" name="stack_trace" nullable="true" comment="Stack Trace"/>
+        <column xsi:type="varchar" name="source_file" nullable="true" length="500" comment="Source File"/>
+        <column xsi:type="int" name="line_number" nullable="true" unsigned="true" comment="Line Number"/>
+        <column xsi:type="int" name="column_number" nullable="true" unsigned="true" comment="Column Number"/>
+        <column xsi:type="varchar" name="page_url" nullable="true" length="500" comment="Page URL"/>
+        <column xsi:type="varchar" name="user_agent" nullable="true" length="500" comment="User Agent"/>
+        <column xsi:type="varchar" name="browser_name" nullable="true" length="100" comment="Browser Name"/>
+        <column xsi:type="varchar" name="browser_version" nullable="true" length="50" comment="Browser Version"/>
+        <column xsi:type="varchar" name="os_name" nullable="true" length="100" comment="OS Name"/>
+        <column xsi:type="varchar" name="device_type" nullable="true" length="50" comment="Device Type"/>
+        <column xsi:type="int" name="customer_id" nullable="true" unsigned="true" comment="Customer ID"/>
+        <column xsi:type="varchar" name="session_id" nullable="true" length="100" comment="Session ID"/>
+        <column xsi:type="varchar" name="quote_id" nullable="true" length="50" comment="Quote ID"/>
+        <column xsi:type="varchar" name="ip_address" nullable="true" length="45" comment="IP Address"/>
+        <column xsi:type="int" name="viewport_width" nullable="true" unsigned="true" comment="Viewport Width"/>
+        <column xsi:type="int" name="viewport_height" nullable="true" unsigned="true" comment="Viewport Height"/>
+        <column xsi:type="timestamp" name="created_at" nullable="false" default="CURRENT_TIMESTAMP" comment="Created At"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="entity_id"/>
+        </constraint>
+        <index referenceId="TIREHUB_JSERROR_LOGGING_CREATED_AT" indexType="btree">
+            <column name="created_at"/>
+        </index>
+        <index referenceId="TIREHUB_JSERROR_LOGGING_CUSTOMER_ID" indexType="btree">
+            <column name="customer_id"/>
+        </index>
+        <index referenceId="TIREHUB_JSERROR_LOGGING_SESSION_ID" indexType="btree">
+            <column name="session_id"/>
+        </index>
+    </table>
+</schema>

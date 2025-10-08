@@ -1,0 +1,6 @@
+<?php
+/** @var \Magento\Framework\View\Element\Template $block */
+?>
+<script>
+    window.jsErrorLoggerUrl = '<?= $block->escapeJs($block->getUrl('jserrorlogging/log/save')) ?>';
+</script>
