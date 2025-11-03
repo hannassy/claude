@@ -8,10 +8,11 @@ use Magento\Framework\Controller\Result\RawFactory;
 use Magento\Framework\Controller\Result\RedirectFactory;
 use Magento\Framework\Controller\ResultInterface;
 use Magento\Framework\Exception\LocalizedException;
-use Tirehub\Punchout\Api\Data\SessionInterface;
+use Magento\Framework\Stdlib\CookieManagerInterface;
+use Magento\Framework\Stdlib\Cookie\CookieMetadataFactory;
 use Tirehub\Punchout\Model\ItemFactory;
-use Tirehub\Punchout\Model\SessionFactory;
-use Tirehub\Punchout\Model\ResourceModel\Session as SessionResource;
+use Tirehub\Punchout\Model\ResourceModel\Item as ItemResource;
+use Tirehub\Punchout\Model\ResourceModel\Item\CollectionFactory as ItemCollectionFactory;
 use Tirehub\Punchout\Service\GetPunchoutPartnersManagement;
 use Magento\Framework\Logger\Monolog;
 use Tirehub\Punchout\Model\Config;
@@ -21,14 +22,18 @@ use Exception;
 
 class Item
 {
+    private const COOKIE_NAME = 'punchout_items_identifier';
+
     public function __construct(
         private readonly RawFactory $rawFactory,
         private readonly RedirectFactory $redirectFactory,
-        private readonly SessionFactory $sessionFactory,
-        private readonly SessionResource $sessionResource,
         private readonly ItemFactory $itemFactory,
+        private readonly ItemResource $itemResource,
+        private readonly ItemCollectionFactory $itemCollectionFactory,
         private readonly GetPunchoutPartnersManagement $getPunchoutPartnersManagement,
         private readonly LookupDealersInterface $lookupDealers,
+        private readonly CookieManagerInterface $cookieManager,
+        private readonly CookieMetadataFactory $cookieMetadataFactory,
         private readonly Monolog $logger,
         private readonly Config $config,
         private readonly LogFactory $logFactory
@@ -37,17 +42,14 @@ class Item
 
     public function execute(RequestInterface $request): ResultInterface
     {
-        $buyerCookie = null;
         $log = $this->logFactory->create();
 
         try {
-            // Get required parameters
             $partnerIdentity = $request->getParam('partnerIdentity') ?? $request->getParam('PartnerIdentity');
             $dealerCode = $request->getParam('dealerCode') ?? $request->getParam('DealerCode');
             $itemId = $request->getParam('itemId') ?? $request->getParam('ItemId');
             $quantityNeeded = (int)($request->getParam('quantityNeeded') ?? (int)$request->getParam('QuantityNeeded'));
 
-            // Validate required parameters
             if (empty($partnerIdentity) || empty($dealerCode)) {
                 throw new LocalizedException(__('Partner Identity and Dealer Code are required parameters'));
             }
@@ -59,112 +61,150 @@ class Item
                 'quantityNeeded' => $quantityNeeded
             ]);
 
-            // Validate dealer code
             $dealerCode = $this->getValidDealerCode($dealerCode, $partnerIdentity);
             if (!$dealerCode) {
                 throw new LocalizedException(__('Invalid dealer code or partner identity'));
             }
 
-            // Generate a unique buyerCookie (token) for this punchout session
-            $buyerCookie = md5($partnerIdentity . $dealerCode . uniqid('', true));
+            $identifier = $this->getOrCreateIdentifier();
 
-            $log->logInfo('Processing item request', [
-                'partnerIdentity' => $partnerIdentity,
-                'dealerCode' => $dealerCode,
-                'itemId' => $itemId,
-                'quantityNeeded' => $quantityNeeded,
-                'buyerCookie' => $buyerCookie
-            ], $buyerCookie);
+            $this->saveItemToDatabase($identifier, $dealerCode, $partnerIdentity, $itemId, $quantityNeeded);
 
-            // Check if we have multiple items (comma-separated)
-            $itemIds = $itemId ? explode(',', $itemId) : [];
+            $this->setCookie($identifier);
 
-            if (!empty($itemIds)) {
-                // Process each item
-                foreach ($itemIds as $singleItemId) {
-                    // Handle each item
-                    $this->saveItemRequest($buyerCookie, $dealerCode, $partnerIdentity, $singleItemId, $quantityNeeded);
-                }
+            $log->setData([
+                'type' => 'item',
+                'request' => json_encode($request->getParams()),
+                'response' => 'Success',
+                'partner_identity' => $partnerIdentity,
+                'dealer_code' => $dealerCode,
+            ]);
+            $log->save();
 
-                $log->logInfo('Saved item requests', [
-                    'items_count' => count($itemIds),
-                    'items' => $itemIds
-                ], $buyerCookie);
-            }
-
-            $corpAddressId = $this->getCorpAddressId($partnerIdentity);
-
-            // Create a new punchout session
-            $session = $this->sessionFactory->create();
-            $session->setData(SessionInterface::BUYER_COOKIE, $buyerCookie);
-            $session->setData(SessionInterface::CLIENT_TYPE, 'default');
-            $session->setData(SessionInterface::STATUS, SessionInterface::STATUS_NEW);
-            $session->setData(SessionInterface::PARTNER_IDENTITY, $partnerIdentity);
-            $session->setData(SessionInterface::CORP_ADDRESS_ID, $corpAddressId);
-            $session->setData(SessionInterface::ADDRESS_ID, $dealerCode);
-            $this->sessionResource->save($session);
-
-            $log->logInfo('Created punchout session', [
-                'session_id' => $session->getId(),
-                'corp_address_id' => $corpAddressId
-            ], $buyerCookie);
-
-            // Get redirect URL from partner settings
             $redirectUrl = $this->getRedirectUrl($partnerIdentity);
-
-            if (empty($redirectUrl) || !$this->config->isProcessItemRedirect()) {
-                // If no redirect URL is configured, return success response
-                $result = $this->rawFactory->create();
-                $result->setHttpResponseCode(200);
-                $result->setContents(json_encode(['success' => true, 'buyerCookie' => $buyerCookie]));
-                $result->setHeader('Content-Type', 'application/json');
-
-                $log->logInfo('Returning success response (debug mode)', [
-                    'redirectUrl' => $redirectUrl
-                ], $buyerCookie);
-
-                return $result;
+            if (!$redirectUrl) {
+                throw new LocalizedException(__('Redirect URL not configured for partner: %1', $partnerIdentity));
             }
 
-            // Add cookie parameter to redirect URL
-            $separator = (str_contains($redirectUrl, '?')) ? '&' : '?';
-            $redirectUrl .= $separator . 'cookie=' . $buyerCookie;
+            $this->logger->info('Punchout: Redirecting to customer URL', [
+                'url' => $redirectUrl,
+                'identifier' => $identifier
+            ]);
 
-            $log->logInfo('Redirecting to partner URL', [
-                'redirectUrl' => $redirectUrl
-            ], $buyerCookie);
+            $redirect = $this->redirectFactory->create();
+            $redirect->setUrl($redirectUrl);
+            return $redirect;
 
-            // Redirect to partner URL
-            $resultRedirect = $this->redirectFactory->create();
-            return $resultRedirect->setUrl($redirectUrl);
-        } catch (LocalizedException $e) {
-            $this->logger->error('Punchout: Error processing item request: ' . $e->getMessage());
+        } catch (Exception $e) {
+            $this->logger->error('Punchout: Item processing error: ' . $e->getMessage(), [
+                'exception' => $e
+            ]);
 
-            $log->logError('Error processing item request', [
-                'error' => $e->getMessage(),
-                'partnerIdentity' => $partnerIdentity ?? '',
-                'dealerCode' => $dealerCode ?? ''
-            ], $buyerCookie);
-
-            $result = $this->rawFactory->create();
-            $result->setHttpResponseCode(400);
-            $result->setContents(json_encode(['error' => $e->getMessage()]));
-            $result->setHeader('Content-Type', 'application/json');
-            return $result;
-        } catch (\Exception $e) {
-            $this->logger->error('Punchout: Unexpected error processing item request: ' . $e->getMessage());
-
-            $log->logCritical('Unexpected error processing item request', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ], $buyerCookie);
+            $log->setData([
+                'type' => 'item',
+                'request' => json_encode($request->getParams()),
+                'response' => 'Error: ' . $e->getMessage(),
+                'partner_identity' => $partnerIdentity ?? null,
+                'dealer_code' => $dealerCode ?? null,
+            ]);
+            $log->save();
 
             $result = $this->rawFactory->create();
             $result->setHttpResponseCode(500);
-            $result->setContents(json_encode(['error' => 'Internal server error']));
-            $result->setHeader('Content-Type', 'application/json');
+            $result->setContents('Error: ' . $e->getMessage());
             return $result;
         }
+    }
+
+    private function getOrCreateIdentifier(): string
+    {
+        $identifier = $this->cookieManager->getCookie(self::COOKIE_NAME);
+
+        if (!$identifier) {
+            $identifier = $this->generateIdentifier();
+        }
+
+        return $identifier;
+    }
+
+    private function generateIdentifier(): string
+    {
+        return sprintf(
+            '%s-%s',
+            bin2hex(random_bytes(16)),
+            time()
+        );
+    }
+
+    private function saveItemToDatabase(
+        string $identifier,
+        string $dealerCode,
+        string $partnerIdentity,
+        ?string $itemId,
+        int $quantity
+    ): void {
+        if (empty($itemId)) {
+            return;
+        }
+
+        $collection = $this->itemCollectionFactory->create();
+        $collection->addFieldToFilter('identifier', $identifier)
+            ->addFieldToFilter('item_id', $itemId);
+
+        $existingItem = $collection->getFirstItem();
+
+        if ($existingItem->getId()) {
+            $existingItem->setQuantity($quantity);
+            $existingItem->setUpdatedAt(date('Y-m-d H:i:s'));
+            $this->itemResource->save($existingItem);
+
+            $this->logger->info('Punchout: Updated existing item', [
+                'identifier' => $identifier,
+                'item_id' => $itemId,
+                'quantity' => $quantity
+            ]);
+        } else {
+            $item = $this->itemFactory->create();
+            $item->setData([
+                'token' => md5($identifier . $itemId . time()),
+                'identifier' => $identifier,
+                'dealer_code' => $dealerCode,
+                'partner_identity' => $partnerIdentity,
+                'item_id' => $itemId,
+                'quantity' => $quantity,
+                'status' => 'pending'
+            ]);
+            $this->itemResource->save($item);
+
+            $this->logger->info('Punchout: Created new item', [
+                'identifier' => $identifier,
+                'item_id' => $itemId,
+                'quantity' => $quantity
+            ]);
+        }
+    }
+
+    private function setCookie(string $identifier): void
+    {
+        $lifetime = $this->config->getCookieLifetime();
+
+        $metadata = $this->cookieMetadataFactory->createPublicCookieMetadata()
+            ->setDuration($lifetime)
+            ->setPath('/')
+            ->setHttpOnly(true)
+            ->setSecure(true)
+            ->setSameSite('Lax');
+
+        $this->cookieManager->setPublicCookie(
+            self::COOKIE_NAME,
+            $identifier,
+            $metadata
+        );
+
+        $this->logger->info('Punchout: Cookie set', [
+            'identifier' => $identifier,
+            'lifetime' => $lifetime
+        ]);
     }
 
     private function getValidDealerCode(string $dealerCode): ?string
@@ -172,45 +212,11 @@ class Item
         try {
             $result = $this->lookupDealers->execute(['dealerCode' => $dealerCode]);
             $exists =  $result['results'][0]['shipToLocation']['locationId'] ?? null;
-            
+
             return $exists ? $dealerCode : null;
         } catch (Exception $e) {
             $this->logger->error('Punchout: Error in validateDealerExists on items of interests: ' . $e->getMessage());
             return null;
-        }
-    }
-
-    private function saveItemRequest(
-        string $token,
-        string $dealerCode,
-        string $partnerIdentity,
-        string $itemId,
-        int $quantity
-    ): void {
-        try {
-            // Create new item record
-            $itemModel = $this->itemFactory->create();
-            $itemModel->setData([
-                'token' => $token,
-                'dealer_code' => $dealerCode,
-                'partner_identity' => $partnerIdentity,
-                'item_id' => $itemId,
-                'quantity' => $quantity,
-                'status' => 'pending'
-            ]);
-            $itemModel->save();
-
-            $this->logger->info(
-                'Punchout: Item request saved',
-                [
-                    'token' => $token,
-                    'itemId' => $itemId,
-                    'dealerCode' => $dealerCode
-                ]
-            );
-        } catch (\Exception $e) {
-            $this->logger->error('Punchout: Error saving item request: ' . $e->getMessage());
-            throw $e;
         }
     }
 
@@ -221,21 +227,6 @@ class Item
         foreach ($punchoutPartners as $partner) {
             if (strtolower($partner['identity'] ?? '') === strtolower($partnerIdentity)) {
                 return $partner['punchoutRedirectUrl'] ?? null;
-            }
-        }
-
-        return null;
-    }
-
-    private function getCorpAddressId(string $identity): ?string
-    {
-        $identity = strtolower($identity);
-        $result = $this->getPunchoutPartnersManagement->getResult();
-
-        foreach ($result as $item) {
-            $itemIdentity = strtolower($item['identity'] ?? '');
-            if ($itemIdentity === $identity) {
-                return $item['corpAddressId'] ?? null;
             }
         }
 

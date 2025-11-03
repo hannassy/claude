@@ -36,6 +36,7 @@
     <table name="tirehub_punchout_item" resource="default" engine="innodb" comment="PunchOut Requested Items">
         <column xsi:type="int" name="entity_id" padding="10" unsigned="true" nullable="false" identity="true" comment="Item ID"/>
         <column xsi:type="varchar" name="token" nullable="false" length="64" comment="Associated Token"/>
+        <column xsi:type="varchar" name="identifier" nullable="true" length="255" comment="Unique Identifier for Cookie"/>
         <column xsi:type="varchar" name="dealer_code" nullable="false" length="64" comment="Dealer Code"/>
         <column xsi:type="varchar" name="partner_identity" nullable="false" length="255" comment="Partner Identity"/>
         <column xsi:type="varchar" name="item_id" nullable="false" length="255" comment="Item ID"/>
@@ -48,6 +49,9 @@
         </constraint>
         <index referenceId="TIREHUB_PUNCHOUT_ITEM_TOKEN" indexType="btree">
             <column name="token"/>
+        </index>
+        <index referenceId="TIREHUB_PUNCHOUT_ITEM_IDENTIFIER" indexType="btree">
+            <column name="identifier"/>
         </index>
     </table>
 

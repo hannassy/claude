@@ -10,6 +10,7 @@ use Magento\Framework\App\RequestInterface;
 use Magento\Framework\DataObject;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Logger\Monolog;
+use Magento\Framework\Stdlib\CookieManagerInterface;
 use Tirehub\Catalog\Api\RenderRegionalProductsInterface;
 use Tirehub\Checkout\Service\Management\LookupInventoryManagement;
 use Tirehub\Punchout\Api\Data\SessionInterface;
@@ -19,7 +20,6 @@ use Tirehub\Punchout\Model\ResourceModel\Item as ItemResource;
 use Tirehub\Punchout\Model\SessionFactory;
 use Tirehub\Punchout\Model\ResourceModel\Session as SessionResource;
 use Magento\Framework\Stdlib\Cookie\CookieMetadataFactory;
-use Magento\Framework\Stdlib\CookieManagerInterface;
 use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Framework\App\Http\Context as HttpContext;
 use Magento\Customer\Model\Context as CustomerContext;
@@ -28,6 +28,8 @@ use Tirehub\Punchout\Model\LogFactory;
 
 class ShoppingStart
 {
+    private const COOKIE_NAME = 'punchout_items_identifier';
+
     public function __construct(
         private readonly SessionFactory $sessionFactory,
         private readonly SessionResource $sessionResource,
@@ -72,54 +74,61 @@ class ShoppingStart
                 throw new LocalizedException(__('Invalid session'));
             }
 
-            $customerId = $session->getData(SessionInterface::CUSTOMER_ID);
+            $customerId = (int)$session->getCustomerId();
 
-            if ($customerId) {
-                // Clear any existing login state if customer ID is different
-                if ($this->customerSession->isLoggedIn() && $this->customerSession->getCustomerId() != $customerId) {
-                    $this->logger->info('Punchout: Logging out existing customer before punchout login');
+            if (!$customerId) {
+                throw new LocalizedException(__('Customer not found for session'));
+            }
 
-                    $log->logInfo('Logging out existing customer', [
-                        'existing_customer_id' => $this->customerSession->getCustomerId(),
-                        'new_customer_id' => $customerId
-                    ], $buyerCookie);
+            if ($session->getStatus() == SessionInterface::STATUS_ACTIVE) {
+                $log->logInfo('Session already active, skipping login', [
+                    'customer_id' => $customerId
+                ], $buyerCookie);
 
-                    // Force logout and clear all session data
-                    $this->customerSession->logout();
-                    $this->customerSession->regenerateId();
-                    $this->customerSession->clearStorage();
+                $this->enablePunchoutMode->execute($buyerCookie);
+                $this->addItemsToCart($buyerCookie);
 
-                    // Clear session cookies
-                    $metadata = $this->cookieMetadataFactory
-                        ->createPublicCookieMetadata()
-                        ->setDuration(0)
-                        ->setPath('/')
-                        ->setHttpOnly(false);
+                return true;
+            } else {
+                if ($this->customerSession->isLoggedIn()) {
+                    $currentCustomerId = $this->customerSession->getCustomerId();
 
-                    $this->cookieManager->deleteCookie('private_content_version', $metadata);
-                    $this->cookieManager->deleteCookie('section_data_ids', $metadata);
-                    $this->cookieManager->deleteCookie('mage-cache-sessid', $metadata);
+                    if ($currentCustomerId != $customerId) {
+                        $log->logInfo('Logging out current customer', [
+                            'current_customer_id' => $currentCustomerId,
+                            'target_customer_id' => $customerId
+                        ], $buyerCookie);
 
-                    // Force clear HTTP context
-                    $this->httpContext->setValue(CustomerContext::CONTEXT_AUTH, false, false);
-                    $this->httpContext->setValue(CustomerContext::CONTEXT_GROUP, 0, 0);
+                        $this->customerSession->logout();
+                        $this->customerSession->regenerateId();
+                        $this->customerSession->clearStorage();
 
-                    // Small delay to ensure logout is processed
-                    usleep(500000); // 0.5 second
+                        $metadata = $this->cookieMetadataFactory
+                            ->createPublicCookieMetadata()
+                            ->setDuration(0)
+                            ->setPath('/')
+                            ->setHttpOnly(false);
+
+                        $this->cookieManager->deleteCookie('private_content_version', $metadata);
+                        $this->cookieManager->deleteCookie('section_data_ids', $metadata);
+                        $this->cookieManager->deleteCookie('mage-cache-sessid', $metadata);
+
+                        $this->httpContext->setValue(CustomerContext::CONTEXT_AUTH, false, false);
+                        $this->httpContext->setValue(CustomerContext::CONTEXT_GROUP, 0, 0);
+
+                        usleep(500000);
+                    }
                 }
 
                 $session->setData(SessionInterface::STATUS, SessionInterface::STATUS_ACTIVE);
                 $this->sessionResource->save($session);
 
-                // Log in the customer if not already logged in
                 if (!$this->customerSession->isLoggedIn()) {
                     $this->customerSession->loginById($customerId);
                     $this->customerSession->regenerateId();
 
-                    // Force new private content version
                     $this->customerSession->setData('private_content_version', time());
 
-                    // Update HTTP context
                     $customer = $this->customerRepository->getById($customerId);
                     $this->httpContext->setValue(CustomerContext::CONTEXT_AUTH, true, false);
                     $this->httpContext->setValue(CustomerContext::CONTEXT_GROUP, $customer->getGroupId(), 0);
@@ -130,7 +139,6 @@ class ShoppingStart
                     ], $buyerCookie);
                 }
 
-                // Enable punchout mode
                 $this->enablePunchoutMode->execute($buyerCookie);
 
                 $this->logger->info('Punchout: Customer logged in: ' . $customerId);
@@ -139,10 +147,7 @@ class ShoppingStart
 
                 $log->logInfo('Cart cleared', [], $buyerCookie);
 
-                // Add requested items to cart if any
-                $hasItems = $this->addItemsToCart($buyerCookie);
-
-                return $hasItems;
+                return $this->addItemsToCart($buyerCookie);
             }
 
             return false;
@@ -188,7 +193,12 @@ class ShoppingStart
         $log = $this->logFactory->create();
 
         try {
-            $items = $this->loadItemsByBuyerCookie($buyerCookie);
+            $identifier = $this->cookieManager->getCookie(self::COOKIE_NAME);
+
+            if ($identifier) {
+                $this->logger->info('Punchout: Loading items by identifier', ['identifier' => $identifier]);
+                $items = $this->loadItemsByIdentifier($identifier);
+            }
 
             if (empty($items)) {
                 $log->logInfo('No items to add to cart', [], $buyerCookie);
@@ -268,16 +278,16 @@ class ShoppingStart
         $this->session->setData('punchout_deferred_messages', $messages);
     }
 
-    private function loadItemsByBuyerCookie(string $buyerCookie): array
+    private function loadItemsByIdentifier(string $identifier): array
     {
         try {
             $collection = $this->itemCollectionFactory->create();
-            $collection->addFieldToFilter('token', $buyerCookie);
+            $collection->addFieldToFilter('identifier', $identifier);
             $collection->addFieldToFilter('status', 'pending');
 
             return $collection->getItems();
         } catch (\Exception $e) {
-            $this->logger->error('Punchout: Error loading items by buyer cookie: ' . $e->getMessage());
+            $this->logger->error('Punchout: Error loading items by identifier: ' . $e->getMessage());
             return [];
         }
     }

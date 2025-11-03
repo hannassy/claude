@@ -23,6 +23,11 @@
                     <label>Force Select Location</label>
                     <comment>Partners identity, comma separated</comment>
                 </field>
+                <field id="cookie_lifetime" translate="label comment" type="text" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Cookie Lifetime (seconds)</label>
+                    <comment>Default: 604800 (7 days). Duration for punchout items identifier cookie.</comment>
+                    <validate>validate-number validate-zero-or-greater</validate>
+                </field>
             </group>
             <group id="customer" translate="label" type="text" sortOrder="200" showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>Customer Settings</label>

@@ -36,10 +36,12 @@
             "quantity": true,
             "status": true,
             "created_at": true,
-            "updated_at": true
+            "updated_at": true,
+            "identifier": true
         },
         "index": {
-            "TIREHUB_PUNCHOUT_ITEM_TOKEN": true
+            "TIREHUB_PUNCHOUT_ITEM_TOKEN": true,
+            "TIREHUB_PUNCHOUT_ITEM_IDENTIFIER": true
         },
         "constraint": {
             "PRIMARY": true

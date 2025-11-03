@@ -56,4 +56,11 @@ class Config
     {
         return (bool)$this->scopeConfig->getValue('punchout/dev/disable_buyer_cookie_validation');
     }
+
+    public function getCookieLifetime(): int
+    {
+        $lifetime = $this->scopeConfig->getValue('punchout/general/cookie_lifetime');
+
+        return $lifetime ? (int)$lifetime : 604800;
+    }
 }
